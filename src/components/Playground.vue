@@ -14,6 +14,7 @@ const answerMap = reactive({
   ]
 })
 let isTopNumbersShow = ref(true)
+const isFastMode = ref(false)
 
 // 前置输入准备相关
 let leftInputContent = ref('')
@@ -115,7 +116,12 @@ const submit = (location) => {
 }
 const proceedSubmit = (val, location) => {
   const fixedVal = val.replace(/[\s/]/g, ',').replace(/,{2,}/g, ',').replace(/^,/, '').replace(/,$/, '')
-  const ary = fixedVal.split(',')
+  let ary = []
+  if (isFastMode.value) {
+    ary = fixedVal.split('')
+  } else {
+    ary = fixedVal.split(',')
+  }
   puz[location].push(ary.map(item => parseInt(item, 10)))
 }
 const checkInputValid = (val) => {
@@ -128,10 +134,40 @@ const checkInputValid = (val) => {
   }
   return true
 }
+const handleLoadOcr = () => {
+  const event = document.createEvent('MouseEvents')
+  event.initMouseEvent('click', false, false)
+  document.querySelector('#ocr-file-upload').dispatchEvent(event)
+}
+const handleFileChange = (event) => {
+  const files = event.target.files
+  const postFiles = Array.prototype.slice.call(files)
+  if (postFiles.length === 0) {
+    return
+  }
+  ocrLoad(postFiles[0])
+}
+const ocrLoad = async (image) => {
+  const worker = await window.Tesseract.createWorker('eng')
+  const ret = await worker.recognize(image)
+  console.log(ret.data.text)
+  await worker.terminate()
+}
 const loadDemo = (mode) => {
   const data = demoData[mode]
   puz.top = data.top
   puz.left = data.left
+}
+const handleClickEdit = (location, index, e) => {
+  const res = window.confirm('Do you want to edit or copy? Yes - Edit, Cancel - Copy')
+  if (res) {
+    // edit
+    editNumber(location, index, e)
+  } else {
+    // copy
+    const toCopy = puz[location][index]
+    puz[location].splice(index, 0, toCopy)
+  }
 }
 const editNumber = (location, index, e) => {
   // console.log(e)
@@ -406,10 +442,13 @@ const restart = () => {
         v-model="topInputContent"
         @keyup.enter="submit('top')"
         placeholder="top">
+      <input type="checkbox" v-model="isFastMode" id="fast-mode">
+      <label for="fast-mode">Fast mode</label>
       <div class="box-tip" style="display: inline-block;"
         v-show="status === 'init'">
         <div class="cs-tip">
-          <div class="tip">Valid format is like 3 3 1 or 3,3,1 or 3/3/1. Hit "enter" to confirm</div>
+          <div class="tip" v-show="!isFastMode">Valid format is like 3 3 1 or 3,3,1 or 3/3/1. Hit "enter" to confirm</div>
+          <div class="tip" v-show="isFastMode">Valid format is like 331</div>
         </div>
       </div>
     </div>
@@ -418,6 +457,8 @@ const restart = () => {
       <button @click="startDecode">Decode</button>
     </p>
     <p class="action-seg" v-show="status === 'init'">
+      <button @click="handleLoadOcr()">OCR (Experimental)</button>
+      <input id="ocr-file-upload" type="file" name="image" accept=".jpg,.png,.jpeg,.bmp" @change="handleFileChange" style="display: none;" />
       <button @click="loadDemo('easy')">Load Easy Demo</button>
       <button @click="loadDemo('hard')">Load Hard Demo</button>
     </p>
@@ -460,7 +501,7 @@ const restart = () => {
         v-for="(t, index) in puz.top" :key="index">
         <svg class="icon-btn icon-edit"
           v-show="status === 'init'"
-          @click="editNumber('top', index, $event)"
+          @click="handleClickEdit('top', index, $event)"
           xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M15.7279 9.57627L14.3137 8.16206L5 17.4758V18.89H6.41421L15.7279 9.57627ZM17.1421 8.16206L18.5563 6.74785L17.1421 5.33363L15.7279 6.74785L17.1421 8.16206ZM7.24264 20.89H3V16.6473L16.435 3.21231C16.8256 2.82179 17.4587 2.82179 17.8492 3.21231L20.6777 6.04074C21.0682 6.43126 21.0682 7.06443 20.6777 7.45495L7.24264 20.89Z"></path></svg>
         <div class="cell"
           :class="[answerMapCalc.top.length && n !== answerMapCalc.top[index][nindex] && 'danger']"
@@ -480,7 +521,7 @@ const restart = () => {
           v-for="(l, index) in puz.left" :key="index">
           <svg class="icon-btn icon-edit"
             v-show="status === 'init'"
-            @click="editNumber('left', index, $event)"
+            @click="handleClickEdit('left', index, $event)"
             xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M15.7279 9.57627L14.3137 8.16206L5 17.4758V18.89H6.41421L15.7279 9.57627ZM17.1421 8.16206L18.5563 6.74785L17.1421 5.33363L15.7279 6.74785L17.1421 8.16206ZM7.24264 20.89H3V16.6473L16.435 3.21231C16.8256 2.82179 17.4587 2.82179 17.8492 3.21231L20.6777 6.04074C21.0682 6.43126 21.0682 7.06443 20.6777 7.45495L7.24264 20.89Z"></path></svg>
           <div class="cell"
             :class="[answerMapCalc.left.length && n !== answerMapCalc.left[index][nindex] && 'danger']"
