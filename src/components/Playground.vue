@@ -104,6 +104,11 @@ const listenKeyStroke = (event) => {
   if (e.keyCode === 70) {
     // 侦听f按键
     isFastMode.value = !isFastMode.value
+  } else if (e.keyCode === 82) {
+    // 侦听r按键
+    if (status.value === 'resolving') {
+      standardResolve()
+    }
   }
 }
 const submit = (location) => {
@@ -445,14 +450,17 @@ const restart = () => {
       <input class="number-input" type="text"
         v-model="leftInputContent"
         @keyup.enter="submit('left')"
-        placeholder="<-left"
+        placeholder="👈left"
         style="margin-right: 1rem;">
       <input class="number-input" type="text"
         v-model="topInputContent"
         @keyup.enter="submit('top')"
-        placeholder="top">
-      <input type="checkbox" v-model="isFastMode" id="fast-mode">
-      <label for="fast-mode">Fast mode(F)</label>
+        placeholder="👇top"
+        style="margin-right: 1rem;">
+      <span style="display: inline-flex; align-items: center; margin-right: 1rem;">
+        <input type="checkbox" v-model="isFastMode" id="fast-mode">
+        <label for="fast-mode" style="font-size: 13px;">Fast mode(F)</label>
+      </span>
       <div class="box-tip" style="display: inline-block;"
         v-show="status === 'init'">
         <div class="cs-tip">
@@ -472,7 +480,7 @@ const restart = () => {
       <button @click="loadDemo('hard')">Load Hard Demo</button>
     </p>
     <p class="action-seg" v-show="status === 'resolving'">
-      <button @click="standardResolve">Resolve</button>
+      <button @click="standardResolve">Resolve(R)</button>
       <!-- <button @click="resolveByBlock">Resolve By Blocks</button>
       <button @click="resolveByEdge">Resolve By Edge</button>
       <button @click="resolveByMarkedOrCrossed">Resolve By Marked/Crossed</button> -->
