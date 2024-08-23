@@ -92,11 +92,20 @@ onMounted(() => {
     }
   })
   window.addEventListener('scroll', checkTopNumberScrollOut)
+  window.addEventListener('keydown', listenKeyStroke)
 })
 onUnmounted(() => {
   eventBus.off('doneFollowInput')
   window.removeEventListener('scroll', checkTopNumberScrollOut)
+  window.removeEventListener('keydown', listenKeyStroke)
 })
+const listenKeyStroke = (event) => {
+  const e = event || window.event
+  if (e.keyCode === 70) {
+    // 侦听f按键
+    isFastMode.value = !isFastMode.value
+  }
+}
 const submit = (location) => {
   if (location === 'left') {
     leftInputContent.value = leftInputContent.value.replace(/[^\d\s,/]/g, '')
@@ -443,7 +452,7 @@ const restart = () => {
         @keyup.enter="submit('top')"
         placeholder="top">
       <input type="checkbox" v-model="isFastMode" id="fast-mode">
-      <label for="fast-mode">Fast mode</label>
+      <label for="fast-mode">Fast mode(F)</label>
       <div class="box-tip" style="display: inline-block;"
         v-show="status === 'init'">
         <div class="cs-tip">

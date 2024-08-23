@@ -44,7 +44,7 @@ const submit = () => {
 
 <style scoped>
 .box-follow-input {
-  position: absolute;
+  position: fixed;
   padding: 1rem;
   border: 1px solid rgb(170, 190, 255);
   background: #fff;
