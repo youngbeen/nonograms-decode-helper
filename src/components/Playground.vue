@@ -348,7 +348,13 @@ const focusColPuz = computed(() => {
     return null
   }
 })
+const comboMode = ref('') // '' - closed, mark|cross
 const handleMouseOverCell = (e, rowIndex, colIndex) => {
+  if (comboMode.value === 'mark' && answerMap.data[rowIndex][colIndex] !== '1') {
+    mark(rowIndex, colIndex)
+  } else if (comboMode.value === 'cross' && answerMap.data[rowIndex][colIndex] !== '0') {
+    cross(rowIndex, colIndex)
+  }
   focusRowIndex.value = rowIndex
   focusColIndex.value = colIndex
   handleGroupNumber(e)
@@ -420,6 +426,22 @@ const handleGroupNumber = (e) => {
   } else {
     eventBus.emit('notifyHideFollowIndicator')
   }
+}
+const handleMouseDown = (e, rowIndex, colIndex) => {
+  // console.log('mouse down', e)
+  if (e.button === 2) {
+    // start cross
+    cross(rowIndex, colIndex)
+    comboMode.value = 'cross'
+  } else {
+    // start mark
+    mark(rowIndex, colIndex)
+    comboMode.value = 'mark'
+  }
+}
+const handleMouseUp = (e) => {
+  // console.log('mouse up', e)
+  comboMode.value = ''
 }
 const mark = (rowIndex, colIndex) => {
   const cellValue = answerMap.data[rowIndex][colIndex]
@@ -634,8 +656,9 @@ const restart = () => {
               v-for="(c, ci) in r" :key="ci"
               @mouseover="handleMouseOverCell($event, index, ci)"
               @mouseout="handleMouseOutCell()"
-              @click.left="mark(index, ci)"
-              @click.right.prevent="cross(index, ci)">&nbsp;</div>
+              @mousedown="handleMouseDown($event, index, ci)"
+              @mouseup="handleMouseUp"
+              @click.right.prevent>&nbsp;</div>
           </div>
         </div>
       </div>

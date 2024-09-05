@@ -41,7 +41,7 @@ onBeforeUnmount(() => {
   z-index: 2;
   padding: 4px;
   border: 1px solid rgb(170, 190, 255);
-  background: rgba(255, 255, 255, 0.8);
+  background: rgba(255, 255, 255, 0.9);
   color: #666;
   font-size: 12px;
 }
