@@ -5,7 +5,15 @@ import demoData from '@/demo/demoData'
 import { initMap, resolveBlock, resolveEdge, resolveMarkedOrCrossed, mnQuantaResolve } from '@/utils/core'
 import { addToStorage, clearStorage, getStorageByOffset, saveCopy, getSavedCopy } from '@/utils/storage'
 import FollowInput from './FollowInput.vue'
+import FollowIndicator from './FollowIndicator.vue'
 import FlyTopIndicator from './FlyTopIndicator.vue'
+// const debounce = (fn, ms = 0) => {
+//   let timeoutId
+//   return function (...args) {
+//     clearTimeout(timeoutId)
+//     timeoutId = setTimeout(() => fn.apply(this, args), ms)
+//   }
+// }
 
 let status = ref('init') // init | resolving
 const answerMap = reactive({
@@ -340,13 +348,78 @@ const focusColPuz = computed(() => {
     return null
   }
 })
-const handleMouseOverCell = (rowIndex, colIndex) => {
+const handleMouseOverCell = (e, rowIndex, colIndex) => {
   focusRowIndex.value = rowIndex
   focusColIndex.value = colIndex
+  handleGroupNumber(e)
 }
 const handleMouseOutCell = () => {
   focusRowIndex.value = -1
   focusColIndex.value = -1
+  handleGroupNumber()
+}
+const handleGroupNumber = (e) => {
+  // 根据行和列计算连续marked数字信息
+  if (focusRowIndex.value > -1 && focusColIndex.value > -1 && answerMap.data[focusRowIndex.value][focusColIndex.value] === '1') {
+    // 检查行
+    let rowCount = 1 // 当前block算1个
+    // 向左检查
+    for (let i = focusColIndex.value - 1; i >= 0; i--) {
+      const item = answerMap.data[focusRowIndex.value][i]
+      if (item === '1') {
+        rowCount++
+      } else {
+        break
+      }
+    }
+    // 向右检查
+    for (let i = focusColIndex.value + 1; i < answerMap.data[focusRowIndex.value].length; i++) {
+      const item = answerMap.data[focusRowIndex.value][i]
+      if (item === '1') {
+        rowCount++
+      } else {
+        break
+      }
+    }
+    // 检查列
+    let colCount = 1 // 当前block算1个
+    // 向上检查
+    for (let i = focusRowIndex.value - 1; i >= 0; i--) {
+      const item = answerMap.data[i][focusColIndex.value]
+      if (item === '1') {
+        colCount++
+      } else {
+        break
+      }
+    }
+    // 向下检查
+    for (let i = focusRowIndex.value + 1; i < answerMap.data.length; i++) {
+      const item = answerMap.data[i][focusColIndex.value]
+      if (item === '1') {
+        colCount++
+      } else {
+        break
+      }
+    }
+    // console.log('col', colCount, 'row', rowCount, e)
+    if (rowCount > 5 || colCount > 5) {
+      let content = ''
+      if (rowCount > 5 && colCount > 5) {
+        content = `row: ${rowCount} / col: ${colCount}`
+      } else if (rowCount > 5) {
+        content = rowCount.toString()
+      } else {
+        content = colCount.toString()
+      }
+      eventBus.emit('notifyShowFollowIndicator', {
+        x: e.clientX,
+        y: e.clientY,
+        content
+      })
+    }
+  } else {
+    eventBus.emit('notifyHideFollowIndicator')
+  }
 }
 const mark = (rowIndex, colIndex) => {
   const cellValue = answerMap.data[rowIndex][colIndex]
@@ -559,7 +632,7 @@ const restart = () => {
             <div class="clk-cell"
               :class="['style-' + c]"
               v-for="(c, ci) in r" :key="ci"
-              @mouseover="handleMouseOverCell(index, ci)"
+              @mouseover="handleMouseOverCell($event, index, ci)"
               @mouseout="handleMouseOutCell()"
               @click.left="mark(index, ci)"
               @click.right.prevent="cross(index, ci)">&nbsp;</div>
@@ -570,6 +643,8 @@ const restart = () => {
   </div>
 
   <follow-input></follow-input>
+
+  <follow-indicator></follow-indicator>
 
   <fly-top-indicator
     :is-show="!isTopNumbersShow && focusColPuz"

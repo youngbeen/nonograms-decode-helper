@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onBeforeUnmount } from 'vue'
 import eventBus from '@/EventBus'
 
 const isShow = ref(false)
@@ -18,6 +18,10 @@ onMounted(() => {
     tag.value = params.tag
     isShow.value = true
   })
+})
+
+onBeforeUnmount(() => {
+  eventBus.off('notifyShowFollowInput')
 })
 
 const submit = () => {
