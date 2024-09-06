@@ -177,7 +177,7 @@ const checkRowValid = (pa, rule) => {
 }
 
 export const resolveBlock = (puz, answer) => {
-  // 方法会剔除所有左右两边连续的cross，根据必定重叠的区间进行marked填充
+  // 方法会剔除所有左右两边连续的明确的cell，根据必定重叠的区间进行marked填充
   const width = puz.top.length
   const height = puz.left.length
   const result = [
@@ -190,45 +190,51 @@ export const resolveBlock = (puz, answer) => {
   puz.top.forEach((col, index) => {
     if (!isLineClear('column', answer, index)) {
       // col is like [5, 4]
-      const sums = sum(col)
-      const gapCount = col.length - 1
-      const { preCrossedCount, sufCrossedCount } = getLineSideCrossedCount('column', answer, index)
-      const notSureCount = height - sums - gapCount - preCrossedCount - sufCrossedCount // eg. 2
-      let baseLength = preCrossedCount
-      col.forEach(c => {
-        if (c > notSureCount) {
-          for (let j = 0; j < c - notSureCount; j++) {
-            result.push({
-              x: index,
-              y: baseLength + j + notSureCount,
-              value: '1'
-            })
+      const { preExactCount, preMarkedInfo, sufExactCount, sufMarkedInfo } = getLineSideExactInfo('column', answer, index)
+      const fixedCol = col.slice(preMarkedInfo.length, col.length - sufMarkedInfo.length)
+      const sums = sum(fixedCol)
+      if (sums > 0) {
+        const gapCount = fixedCol.length - 1
+        const notSureCount = height - sums - gapCount - preExactCount - sufExactCount // eg. 2
+        let baseLength = preExactCount
+        fixedCol.forEach(c => {
+          if (c > notSureCount) {
+            for (let j = 0; j < c - notSureCount; j++) {
+              result.push({
+                x: index,
+                y: baseLength + j + notSureCount,
+                value: '1'
+              })
+            }
           }
-        }
-        baseLength += c + 1
-      })
+          baseLength += c + 1
+        })
+      }
     }
   })
   puz.left.forEach((row, index) => {
     if (!isLineClear('row', answer, index)) {
       // row is like [5, 4]
-      const sums = sum(row)
-      const gapCount = row.length - 1
-      const { preCrossedCount, sufCrossedCount } = getLineSideCrossedCount('row', answer, index)
-      const notSureCount = width - sums - gapCount - preCrossedCount - sufCrossedCount // eg. 2
-      let baseLength = preCrossedCount
-      row.forEach(r => {
-        if (r > notSureCount) {
-          for (let j = 0; j < r - notSureCount; j++) {
-            result.push({
-              x: baseLength + j + notSureCount,
-              y: index,
-              value: '1'
-            })
+      const { preExactCount, preMarkedInfo, sufExactCount, sufMarkedInfo } = getLineSideExactInfo('row', answer, index)
+      const fixedRow = row.slice(preMarkedInfo.length, row.length - sufMarkedInfo.length)
+      const sums = sum(fixedRow)
+      if (sums > 0) {
+        const gapCount = fixedRow.length - 1
+        const notSureCount = width - sums - gapCount - preExactCount - sufExactCount // eg. 2
+        let baseLength = preExactCount
+        fixedRow.forEach(r => {
+          if (r > notSureCount) {
+            for (let j = 0; j < r - notSureCount; j++) {
+              result.push({
+                x: baseLength + j + notSureCount,
+                y: index,
+                value: '1'
+              })
+            }
           }
-        }
-        baseLength += r + 1
-      })
+          baseLength += r + 1
+        })
+      }
     }
   })
   return result
@@ -248,11 +254,12 @@ export const resolveEdge = (puz, answer) => {
   puz.left.forEach((row, index) => {
     // line is like [4, 1, 2]
     if (!isLineClear('row', answer, index)) {
-      const { preCrossedCount, sufCrossedCount } = getLineSideCrossedCount('row', answer, index)
-      const firstMarkedIndex = answer[index].findIndex(a => a === '1')
-      const lastMarkedIndex = answer[index].findLastIndex(a => a === '1')
-      if (firstMarkedIndex > -1) {
-        const exactHeadSureLength = preCrossedCount + row[0] - (firstMarkedIndex + 1)
+      const { preExactCount, preMarkedInfo, sufExactCount, sufMarkedInfo } = getLineSideExactInfo('row', answer, index)
+      const firstMarkedIndex = answer[index].findIndex((a, i) => i >= preExactCount && a === '1')
+      const lastMarkedIndex = answer[index].findLastIndex((a, i) => i < answer[index].length - sufExactCount && a === '1')
+      const fixedRow = row.slice(preMarkedInfo.length, row.length - sufMarkedInfo.length)
+      if (firstMarkedIndex > -1 && fixedRow.length) {
+        const exactHeadSureLength = preExactCount + fixedRow[0] - (firstMarkedIndex + 1)
         for (let i = 1; i <= exactHeadSureLength; i++) {
           // 判断首
           result.push({
@@ -262,9 +269,9 @@ export const resolveEdge = (puz, answer) => {
           })
         }
       }
-      if (lastMarkedIndex > -1 && row.length > 1) {
+      if (lastMarkedIndex > -1 && fixedRow.length > 1) {
         // 判断尾
-        const exactTailSureLength = sufCrossedCount + row[row.length - 1] - (width - lastMarkedIndex)
+        const exactTailSureLength = sufExactCount + fixedRow[fixedRow.length - 1] - (width - lastMarkedIndex)
         for (let i = 1; i <= exactTailSureLength; i++) {
           result.push({
             x: lastMarkedIndex - i,
@@ -277,10 +284,10 @@ export const resolveEdge = (puz, answer) => {
   })
   puz.top.forEach((col, index) => {
     if (!isLineClear('column', answer, index)) {
-      const { preCrossedCount, sufCrossedCount } = getLineSideCrossedCount('column', answer, index)
+      const { preExactCount, preMarkedInfo, sufExactCount, sufMarkedInfo } = getLineSideExactInfo('column', answer, index)
       let firstMarkedIndex = -1
       let lastMarkedIndex = -1
-      for (let i = 0; i < answer.length; i++) {
+      for (let i = preExactCount; i < answer.length - sufExactCount; i++) {
         const a = answer[i][index]
         if (a === '1') {
           if (firstMarkedIndex === -1) {
@@ -289,8 +296,9 @@ export const resolveEdge = (puz, answer) => {
           lastMarkedIndex = i
         }
       }
-      if (firstMarkedIndex > -1) {
-        const exactHeadSureLength = preCrossedCount + col[0] - (firstMarkedIndex + 1)
+      const fixedCol = col.slice(preMarkedInfo.length, col.length - sufMarkedInfo.length)
+      if (firstMarkedIndex > -1 && fixedCol.length) {
+        const exactHeadSureLength = preExactCount + fixedCol[0] - (firstMarkedIndex + 1)
         for (let i = 1; i <= exactHeadSureLength; i++) {
           // 判断首
           result.push({
@@ -300,9 +308,9 @@ export const resolveEdge = (puz, answer) => {
           })
         }
       }
-      if (lastMarkedIndex > -1 && col.length > 1) {
+      if (lastMarkedIndex > -1 && fixedCol.length > 1) {
         // 判断尾
-        const exactTailSureLength = sufCrossedCount + col[col.length - 1] - (height - lastMarkedIndex)
+        const exactTailSureLength = sufExactCount + fixedCol[fixedCol.length - 1] - (height - lastMarkedIndex)
         for (let i = 1; i <= exactTailSureLength; i++) {
           result.push({
             x: index,
@@ -441,6 +449,115 @@ const getLineInfo = (direction, answer, index) => {
     crossedCount,
     unknownCount,
     totalCount
+  }
+}
+
+// 获取行列两边连续明确的cell信息
+const getLineSideExactInfo = (direction, answer, index) => {
+  let preExactCount = 0
+  let preMarkedInfo = []
+  let sufExactCount = 0
+  let sufMarkedInfo = []
+  if (direction === 'row') {
+    // calc pre
+    let markedCount = 0
+    for (let i = 0; i < answer[index].length; i++) {
+      if (answer[index][i] !== '') {
+        preExactCount++
+        if (answer[index][i] === '1') {
+          markedCount++
+        } else {
+          if (markedCount) {
+            preMarkedInfo.push(markedCount)
+            markedCount = 0
+          }
+        }
+      } else {
+        // 结束
+        if (markedCount) {
+          // 需要回溯未填充完毕的连续marked
+          preExactCount -= markedCount
+          markedCount = 0
+        }
+        break
+      }
+    }
+    // calc suf
+    markedCount = 0
+    for (let i = answer[index].length - 1; i >= 0; i--) {
+      if (answer[index][i] !== '') {
+        sufExactCount++
+        if (answer[index][i] === '1') {
+          markedCount++
+        } else {
+          if (markedCount) {
+            sufMarkedInfo.unshift(markedCount)
+            markedCount = 0
+          }
+        }
+      } else {
+        // 结束
+        if (markedCount) {
+          // 需要回溯未填充完毕的连续marked
+          sufExactCount -= markedCount
+          markedCount = 0
+        }
+        break
+      }
+    }
+  } else {
+    // calc pre
+    let markedCount = 0
+    for (let i = 0; i < answer.length; i++) {
+      if (answer[i][index] !== '') {
+        preExactCount++
+        if (answer[i][index] === '1') {
+          markedCount++
+        } else {
+          if (markedCount) {
+            preMarkedInfo.push(markedCount)
+            markedCount = 0
+          }
+        }
+      } else {
+        // 结束
+        if (markedCount) {
+          // 需要回溯未填充完毕的连续marked
+          preExactCount -= markedCount
+          markedCount = 0
+        }
+        break
+      }
+    }
+    // calc suf
+    markedCount = 0
+    for (let i = answer.length - 1; i >= 0; i--) {
+      if (answer[i][index] !== '') {
+        sufExactCount++
+        if (answer[i][index] === '1') {
+          markedCount++
+        } else {
+          if (markedCount) {
+            sufMarkedInfo.unshift(markedCount)
+            markedCount = 0
+          }
+        }
+      } else {
+        // 结束
+        if (markedCount) {
+          // 需要回溯未填充完毕的连续marked
+          sufExactCount -= markedCount
+          markedCount = 0
+        }
+        break
+      }
+    }
+  }
+  return {
+    preExactCount, // eg 5
+    preMarkedInfo, // eg [1, 2]
+    sufExactCount,
+    sufMarkedInfo
   }
 }
 

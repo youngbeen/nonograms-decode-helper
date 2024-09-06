@@ -408,14 +408,14 @@ const handleGroupNumber = (e) => {
       }
     }
     // console.log('col', colCount, 'row', rowCount, e)
-    if (rowCount > 5 || colCount > 5) {
+    if (rowCount > 4 || colCount > 4) {
       let content = ''
-      if (rowCount > 5 && colCount > 5) {
-        content = `row: ${rowCount} / col: ${colCount}`
-      } else if (rowCount > 5) {
-        content = rowCount.toString()
+      if (rowCount > 4 && colCount > 4) {
+        content = `—${rowCount} |${colCount}`
+      } else if (rowCount > 4) {
+        content = `—${rowCount}`
       } else {
-        content = colCount.toString()
+        content = `|${colCount}`
       }
       eventBus.emit('notifyShowFollowIndicator', {
         x: e.clientX,
@@ -439,7 +439,7 @@ const handleMouseDown = (e, rowIndex, colIndex) => {
     comboMode.value = 'mark'
   }
 }
-const handleMouseUp = (e) => {
+const handleMouseUp = () => {
   // console.log('mouse up', e)
   comboMode.value = ''
 }
@@ -482,12 +482,17 @@ const redoChange = () => {
  }
 }
 const standardResolve = () => {
+  const countBeforeResolve = resolveInfo.value.resolved
   resolveByBlock(true)
   resolveByEdge(true)
   resolveByMarkedOrCrossed(true)
   const res = addToStorage(answerMap.data, versionOffset.value)
   versionCount.value = res.length
   versionOffset.value = 0
+  if (resolveInfo.value.resolved > countBeforeResolve) {
+    console.log('有新解决的cell，自动重复调用resolve')
+    standardResolve()
+  }
 }
 const save = () => {
   // const name = window.prompt('Give a name for your save data...')
