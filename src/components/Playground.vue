@@ -22,7 +22,7 @@ const answerMap = reactive({
   ]
 })
 let isTopNumbersShow = ref(true)
-const isFastMode = ref(false)
+const isFastMode = ref(true)
 
 // 前置输入准备相关
 let leftInputContent = ref('')
@@ -121,14 +121,14 @@ const listenKeyStroke = (event) => {
 }
 const submit = (location) => {
   if (location === 'left') {
-    leftInputContent.value = leftInputContent.value.replace(/[^\d\s,/]/g, '')
+    leftInputContent.value = leftInputContent.value.replace(/[^\d\s\-*,/]/g, '')
     if (checkInputValid(leftInputContent.value)) {
       // console.log('submit left', leftInputContent.value)
       proceedSubmit(leftInputContent.value, 'left')
       leftInputContent.value = ''
     }
   } else if (location === 'top') {
-    topInputContent.value = topInputContent.value.replace(/[^\d\s,/]/g, '')
+    topInputContent.value = topInputContent.value.replace(/[^\d\s\-*,/]/g, '')
     if (checkInputValid(topInputContent.value)) {
       // console.log('submit top', topInputContent.value)
       proceedSubmit(topInputContent.value, 'top')
@@ -144,7 +144,38 @@ const proceedSubmit = (val, location) => {
   } else {
     ary = fixedVal.split(',')
   }
-  puz[location].push(ary.map(item => parseInt(item, 10)))
+  // 处理m-n形式的大数，以及m*n形式的连数
+  let fixedAry = []
+  let preNum = ''
+  for (let i = 0; i < ary.length; i++) {
+    const item = ary[i]
+    if (item !== '-' && item !== '*') {
+      // 数字
+      if (!preNum) {
+        preNum = item
+      } else {
+        fixedAry.push(preNum)
+        preNum = item
+      }
+    } else if (item === '-') {
+      // 大数
+      fixedAry.push(`${preNum}${ary[i + 1]}`)
+      preNum = ''
+      i++
+    } else if (item === '*') {
+      // 连数
+      for (let j = 0; j < parseInt(ary[i + 1], 10); j++) {
+        fixedAry.push(preNum)
+      }
+      preNum = ''
+      i++
+    }
+  }
+  if (preNum) {
+    fixedAry.push(preNum)
+    preNum = ''
+  }
+  puz[location].push(fixedAry.map(item => parseInt(item, 10)))
 }
 const checkInputValid = (val) => {
   // 将所有的特殊分割符替换为,
@@ -565,7 +596,7 @@ const restart = () => {
         v-show="status === 'init'">
         <div class="cs-tip">
           <div class="tip" v-show="!isFastMode">Valid format is like 3 3 1 or 3,3,1 or 3/3/1. Hit "enter" to confirm</div>
-          <div class="tip" v-show="isFastMode">Valid format is like 331</div>
+          <div class="tip" v-show="isFastMode">Valid format is like 331(stands for 3,3,1), 1-4(stands for 14), 1*3(stands for 1,1,1) </div>
         </div>
       </div>
     </div>
@@ -611,7 +642,8 @@ const restart = () => {
   </div>
 
   <div class="box-main"
-    :class="[status === 'resolving' && 'free']">
+    :class="[status === 'resolving' && 'free']"
+    @mouseup="handleMouseUp">
     <div class="box-top-indicators">
       <div class="box-top-indi"
         :class="[focusColIndex === index && 'focus', answerMapCalc.top.length && t.length < answerMapCalc.top[index].length && 'danger']"
@@ -662,7 +694,6 @@ const restart = () => {
               @mouseover="handleMouseOverCell($event, index, ci)"
               @mouseout="handleMouseOutCell()"
               @mousedown="handleMouseDown($event, index, ci)"
-              @mouseup="handleMouseUp"
               @click.right.prevent>&nbsp;</div>
           </div>
         </div>
