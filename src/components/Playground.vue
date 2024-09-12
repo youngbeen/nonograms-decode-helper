@@ -751,7 +751,7 @@ button:not(:last-of-type) {
   margin-right: 1rem;
 }
 .box-top-indicators {
-  margin-left: 252px;
+  margin-left: 262px;
 }
 .box-top-indi {
   position: relative;
@@ -778,7 +778,7 @@ button:not(:last-of-type) {
   position: absolute;
   left: 0;
   top: 0;
-  width: 250px;
+  width: 260px;
 }
 .box-left-indi {
   position: relative;
@@ -854,7 +854,7 @@ button:not(:last-of-type) {
   top: 5px;
 }
 .box-canvas {
-  margin-left: 252px;
+  margin-left: 262px;
   /* background: red; */
 }
 .row {
