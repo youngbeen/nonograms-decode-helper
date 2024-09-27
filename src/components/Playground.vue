@@ -27,6 +27,10 @@ const isFastMode = ref(true)
 // 前置输入准备相关
 let leftInputContent = ref('')
 let topInputContent = ref('')
+let lastInput = reactive({
+  content: '',
+  position: 'left'
+})
 let puz = reactive({
   top: [
     // [1, 2], ...
@@ -116,7 +120,17 @@ const listenKeyStroke = (event) => {
     // 侦听r按键
     if (status.value === 'resolving') {
       standardResolve()
+    } else {
+      // 重复上一次输入
+      repeatLastInput()
     }
+  }
+}
+const repeatLastInput = () => {
+  if (lastInput.position === 'left') {
+    leftInputContent.value = lastInput.content
+  } else if (lastInput.position === 'top') {
+    topInputContent.value = lastInput.content
   }
 }
 const submit = (location) => {
@@ -125,6 +139,8 @@ const submit = (location) => {
     if (checkInputValid(leftInputContent.value)) {
       // console.log('submit left', leftInputContent.value)
       proceedSubmit(leftInputContent.value, 'left')
+      lastInput.content = leftInputContent.value
+      lastInput.position = 'left'
       leftInputContent.value = ''
     }
   } else if (location === 'top') {
@@ -132,6 +148,8 @@ const submit = (location) => {
     if (checkInputValid(topInputContent.value)) {
       // console.log('submit top', topInputContent.value)
       proceedSubmit(topInputContent.value, 'top')
+      lastInput.content = topInputContent.value
+      lastInput.position = 'top'
       topInputContent.value = ''
     }
   }
@@ -605,7 +623,8 @@ const restart = () => {
       <button @click="startDecode">Decode</button>
     </p>
     <p class="action-seg" v-show="status === 'init'">
-      <button @click="handleLoadOcr()">OCR (Experimental)</button>
+      <button @click="repeatLastInput()">Repeat Last Input(R)</button>
+      <!-- <button @click="handleLoadOcr()">OCR (Experimental)</button> -->
       <input id="ocr-file-upload" type="file" name="image" accept=".jpg,.png,.jpeg,.bmp" @change="handleFileChange" style="display: none;" />
       <button @click="loadDemo('easy')">Load Easy Demo</button>
       <button @click="loadDemo('hard')">Load Hard Demo</button>
@@ -694,7 +713,7 @@ const restart = () => {
               @mouseover="handleMouseOverCell($event, index, ci)"
               @mouseout="handleMouseOutCell()"
               @mousedown="handleMouseDown($event, index, ci)"
-              @click.right.prevent>&nbsp;</div>
+              >&nbsp;</div>
           </div>
         </div>
       </div>

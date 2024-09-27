@@ -3,7 +3,7 @@ import Playground from '../components/Playground.vue'
 </script>
 
 <template>
-  <main>
+  <main @click.right.prevent>
     <Playground />
   </main>
 </template>
