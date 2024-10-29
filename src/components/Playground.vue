@@ -30,6 +30,8 @@ let leftInputContent = ref('')
 let topInputContent = ref('')
 let lastInput = reactive({
   content: '',
+  llContent: '',
+  lllContent: '',
   position: 'left'
 })
 let puz = reactive({
@@ -126,9 +128,21 @@ const listenKeyStroke = (event) => {
 }
 const repeatLastInput = () => {
   if (lastInput.position === 'left') {
-    leftInputContent.value = lastInput.content
+    if (leftInputContent.value.replace(/r/, '') === lastInput.content) {
+      leftInputContent.value = lastInput.llContent
+    } else if (leftInputContent.value.replace(/r/, '') === lastInput.llContent) {
+      leftInputContent.value = lastInput.lllContent
+    } else {
+      leftInputContent.value = lastInput.content
+    }
   } else if (lastInput.position === 'top') {
-    topInputContent.value = lastInput.content
+    if (topInputContent.value.replace(/r/, '') === lastInput.content) {
+      topInputContent.value = lastInput.llContent
+    } else if (topInputContent.value.replace(/r/, '') === lastInput.llContent) {
+      topInputContent.value = lastInput.lllContent
+    } else {
+      topInputContent.value = lastInput.content
+    }
   }
 }
 const submit = (location) => {
@@ -137,6 +151,8 @@ const submit = (location) => {
     if (checkInputValid(leftInputContent.value)) {
       // console.log('submit left', leftInputContent.value)
       proceedSubmit(leftInputContent.value, 'left')
+      lastInput.lllContent = lastInput.llContent
+      lastInput.llContent = lastInput.content
       lastInput.content = leftInputContent.value
       lastInput.position = 'left'
       leftInputContent.value = ''
@@ -146,6 +162,8 @@ const submit = (location) => {
     if (checkInputValid(topInputContent.value)) {
       // console.log('submit top', topInputContent.value)
       proceedSubmit(topInputContent.value, 'top')
+      lastInput.lllContent = lastInput.llContent
+      lastInput.llContent = lastInput.content
       lastInput.content = topInputContent.value
       lastInput.position = 'top'
       topInputContent.value = ''
