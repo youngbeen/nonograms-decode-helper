@@ -1,5 +1,6 @@
 <script setup>
 import { ref, reactive, computed, onMounted, onUnmounted } from 'vue'
+import { clipboard } from '@youngbeen/angle-ctrl'
 import eventBus from '@/EventBus'
 import demoData from '@/demo/demoData'
 import { initMap, resolveBlock, resolveEdge, resolveMarkedOrCrossed, mnQuantaResolve } from '@/utils/core'
@@ -113,15 +114,12 @@ onUnmounted(() => {
 })
 const listenKeyStroke = (event) => {
   const e = event || window.event
-  if (e.keyCode === 70) {
-    // 侦听f按键
-    isFastMode.value = !isFastMode.value
-  } else if (e.keyCode === 82) {
-    // 侦听r按键
+  if (e.keyCode === 82 || e.keyCode === 32) {
+    // 侦听r按键和空格按键
     if (status.value === 'resolving') {
       standardResolve()
-    } else {
-      // 重复上一次输入
+    } else if (e.keyCode === 82) {
+      // 输入状态下r键重复上一次输入
       repeatLastInput()
     }
   }
@@ -205,25 +203,25 @@ const checkInputValid = (val) => {
   }
   return true
 }
-const handleLoadOcr = () => {
-  const event = document.createEvent('MouseEvents')
-  event.initMouseEvent('click', false, false)
-  document.querySelector('#ocr-file-upload').dispatchEvent(event)
-}
+// const handleLoadOcr = () => {
+//   const event = document.createEvent('MouseEvents')
+//   event.initMouseEvent('click', false, false)
+//   document.querySelector('#ocr-file-upload').dispatchEvent(event)
+// }
 const handleFileChange = (event) => {
   const files = event.target.files
   const postFiles = Array.prototype.slice.call(files)
   if (postFiles.length === 0) {
     return
   }
-  ocrLoad(postFiles[0])
+  // ocrLoad(postFiles[0])
 }
-const ocrLoad = async (image) => {
-  const worker = await window.Tesseract.createWorker('eng')
-  const ret = await worker.recognize(image)
-  console.log(ret.data.text)
-  await worker.terminate()
-}
+// const ocrLoad = async (image) => {
+//   const worker = await window.Tesseract.createWorker('eng')
+//   const ret = await worker.recognize(image)
+//   console.log(ret.data.text)
+//   await worker.terminate()
+// }
 const loadDemo = (mode) => {
   const data = demoData[mode]
   puz.top = data.top
@@ -564,6 +562,12 @@ const load = () => {
     versionOffset.value = 0
   }
 }
+const getSaveString = () => {
+  const savedString = window.localStorage.getItem('userSave')
+  if (savedString && clipboard.copy(savedString)) {
+    window.alert('Your saved data string was copied')
+  }
+}
 const loadString = () => {
   const stringData = window.prompt('Your saved data string...')
   if (!stringData) {
@@ -571,9 +575,11 @@ const loadString = () => {
   }
   const savedData = JSON.parse(stringData)[0]
   if (savedData) {
+    status.value = 'resolving'
     answerMap.data = savedData.answerMap
     puz.top = savedData.puz.top
     puz.left = savedData.puz.left
+    clearStorage()
     versionCount.value = 1
     versionOffset.value = 0
   }
@@ -608,7 +614,7 @@ const restart = () => {
         style="margin-right: 1rem;">
       <span style="display: inline-flex; align-items: center; margin-right: 1rem;">
         <input type="checkbox" v-model="isFastMode" id="fast-mode">
-        <label for="fast-mode" style="font-size: 13px;">Fast mode(F)</label>
+        <label for="fast-mode" style="font-size: 13px;">Fast mode</label>
       </span>
       <div class="box-tip" style="display: inline-block;"
         v-show="status === 'init'">
@@ -626,11 +632,12 @@ const restart = () => {
       <button @click="repeatLastInput()">Repeat Last Input(R)</button>
       <!-- <button @click="handleLoadOcr()">OCR (Experimental)</button> -->
       <input id="ocr-file-upload" type="file" name="image" accept=".jpg,.png,.jpeg,.bmp" @change="handleFileChange" style="display: none;" />
+      <button @click="loadString">Load From String Save</button>
       <button @click="loadDemo('easy')">Load Easy Demo</button>
       <button @click="loadDemo('hard')">Load Hard Demo</button>
     </p>
     <p class="action-seg" v-show="status === 'resolving'">
-      <button @click="standardResolve">Resolve(R)</button>
+      <button @click="standardResolve">Resolve(R / blank space)</button>
       <!-- <button @click="resolveByBlock">Resolve By Blocks</button>
       <button @click="resolveByEdge">Resolve By Edge</button>
       <button @click="resolveByMarkedOrCrossed">Resolve By Marked/Crossed</button> -->
@@ -646,7 +653,7 @@ const restart = () => {
     <p class="action-seg" v-show="status === 'resolving'">
       <button @click="save">Save</button>
       <button @click="load">Load</button>
-      <button @click="loadString">Load From String</button>
+      <button @click="getSaveString">Get Save String</button>
       <button @click="restart">Restart</button>
     </p>
     <div class="box-tip">
