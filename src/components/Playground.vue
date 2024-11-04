@@ -126,6 +126,23 @@ const listenKeyStroke = (event) => {
     }
   }
 }
+const handleInput = (e, location) => {
+  // console.log(e, position)
+  if (e.keyCode === 13) {
+    // 侦听输入栏敲击enter
+    submit(location)
+  } else if (e.keyCode >= 112 && e.keyCode <= 121) {
+    // 侦听F1~F10，对应转换为1-1 到 2-0
+    e.preventDefault()
+    let simuInputNumber = (e.keyCode - 101).toString()
+    simuInputNumber = simuInputNumber.split('').join('-')
+    if (location === 'left') {
+      leftInputContent.value += simuInputNumber
+    } else if (location === 'top') {
+      topInputContent.value += simuInputNumber
+    }
+  }
+}
 const repeatLastInput = () => {
   if (lastInput.position === 'left') {
     if (leftInputContent.value.replace(/r/, '') === lastInput.content) {
@@ -622,12 +639,12 @@ const restart = () => {
       v-show="status === 'init'">
       <input class="number-input" type="text"
         v-model="leftInputContent"
-        @keyup.enter="submit('left')"
+        @keydown="handleInput($event, 'left')"
         placeholder="👈left"
         style="margin-right: 1rem;">
       <input class="number-input" type="text"
         v-model="topInputContent"
-        @keyup.enter="submit('top')"
+        @keydown="handleInput($event, 'top')"
         placeholder="👇top"
         style="margin-right: 1rem;">
       <span style="display: inline-flex; align-items: center; margin-right: 1rem;">
@@ -638,7 +655,7 @@ const restart = () => {
         v-show="status === 'init'">
         <div class="cs-tip">
           <div class="tip" v-show="!isFastMode">Valid format is like 3 3 1 or 3,3,1 or 3/3/1. Hit "enter" to confirm</div>
-          <div class="tip" v-show="isFastMode">Valid format is like 331(stands for 3,3,1), 1-4(stands for 14), 1*3(stands for 1,1,1) </div>
+          <div class="tip" v-show="isFastMode">Valid format is like 331(stands for 3,3,1), 1-4(stands for 14), 1*3(stands for 1,1,1), type F1~F10 stands for 1-1 2-0</div>
         </div>
       </div>
     </div>
