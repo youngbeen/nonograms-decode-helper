@@ -642,3 +642,8 @@ const sum = (data) => {
     return total + val
   }, 0)
 }
+
+export const getLineSum = (data) => {
+  const numberSum = sum(data)
+  return numberSum + data.length - 1
+}

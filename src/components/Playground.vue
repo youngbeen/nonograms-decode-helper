@@ -3,7 +3,7 @@ import { ref, reactive, computed, onMounted, onUnmounted } from 'vue'
 import { clipboard } from '@youngbeen/angle-ctrl'
 import eventBus from '@/EventBus'
 import demoData from '@/demo/demoData'
-import { initMap, resolveBlock, resolveEdge, resolveMarkedOrCrossed, mnQuantaResolve } from '@/utils/core'
+import { initMap, resolveBlock, resolveEdge, resolveMarkedOrCrossed, mnQuantaResolve, getLineSum } from '@/utils/core'
 import { addToStorage, clearStorage, getStorageByOffset, saveCopy, getSavedCopy } from '@/utils/storage'
 import FollowInput from './FollowInput.vue'
 import FollowIndicator from './FollowIndicator.vue'
@@ -340,24 +340,25 @@ const answerMapCalc = computed(() => {
   }
 })
 const startDecode = () => {
-  // TODO 准确反馈问题所在位置
-  // TODO 判断某一行/列是否超长
   if (!puz.top.length || !puz.left.length) {
     return
   }
   let flag = true
-  puz.top.forEach(t => {
-    if (t.some(v => v > height.value)) {
+  const wrongPuzLines = []
+  puz.top.forEach((t, i) => {
+    if (getLineSum(t) > height.value) {
       flag = false
+      wrongPuzLines.push(`top${i + 1}`)
     }
   })
-  puz.left.forEach(l => {
-    if (l.some(v => v > width.value)) {
+  puz.left.forEach((l, i) => {
+    if (getLineSum(l) > width.value) {
       flag = false
+      wrongPuzLines.push(`left${i + 1}`)
     }
   })
   if (!flag) {
-    window.alert('Some numbers are oversize, you should revise it first')
+    window.alert(`Some numbers are oversize(${wrongPuzLines.join(',')})`)
     return
   }
   // all top numbers sum must === all left numbers sum, check it
