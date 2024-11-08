@@ -168,9 +168,11 @@ const submit = (location) => {
     if (checkInputValid(leftInputContent.value)) {
       // console.log('submit left', leftInputContent.value)
       proceedSubmit(leftInputContent.value, 'left')
-      lastInput.lllContent = lastInput.llContent
-      lastInput.llContent = lastInput.content
-      lastInput.content = leftInputContent.value
+      if (leftInputContent.value !== lastInput.content) {
+        lastInput.lllContent = lastInput.llContent
+        lastInput.llContent = lastInput.content
+        lastInput.content = leftInputContent.value
+      }
       lastInput.position = 'left'
       leftInputContent.value = ''
     }
@@ -179,9 +181,11 @@ const submit = (location) => {
     if (checkInputValid(topInputContent.value)) {
       // console.log('submit top', topInputContent.value)
       proceedSubmit(topInputContent.value, 'top')
-      lastInput.lllContent = lastInput.llContent
-      lastInput.llContent = lastInput.content
-      lastInput.content = topInputContent.value
+      if (topInputContent.value !== lastInput.content) {
+        lastInput.lllContent = lastInput.llContent
+        lastInput.llContent = lastInput.content
+        lastInput.content = topInputContent.value
+      }
       lastInput.position = 'top'
       topInputContent.value = ''
     }
@@ -336,6 +340,8 @@ const answerMapCalc = computed(() => {
   }
 })
 const startDecode = () => {
+  // TODO 准确反馈问题所在位置
+  // TODO 判断某一行/列是否超长
   if (!puz.top.length || !puz.left.length) {
     return
   }
