@@ -131,6 +131,14 @@ const handleInput = (e, location) => {
   if (e.keyCode === 13) {
     // 侦听输入栏敲击enter
     submit(location)
+  } else if (e.keyCode === 65) {
+    // 侦听a，对应转换为1-0
+    e.preventDefault()
+    if (location === 'left') {
+      leftInputContent.value += '1-0'
+    } else if (location === 'top') {
+      topInputContent.value += '1-0'
+    }
   } else if (e.keyCode >= 112 && e.keyCode <= 121) {
     // 侦听F1~F10，对应转换为1-1 到 2-0
     e.preventDefault()
@@ -684,7 +692,7 @@ const restart = () => {
         v-show="status === 'init'">
         <div class="cs-tip">
           <div class="tip" v-show="!isFastMode">Valid format is like 3 3 1 or 3,3,1 or 3/3/1. Hit "enter" to confirm</div>
-          <div class="tip" v-show="isFastMode">Valid format is like 331(stands for 3,3,1), 1-4(stands for 14), 1*3(stands for 1,1,1), type F1~F10 stands for 1-1 2-0</div>
+          <div class="tip" v-show="isFastMode">Valid format is like 331(stands for 3,3,1), 1-4(stands for 14), 1*3(stands for 1,1,1), type F1~F10 stands for 1-1 2-0, type 'a' stands for 1-0</div>
         </div>
       </div>
     </div>
