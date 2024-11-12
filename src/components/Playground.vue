@@ -3,7 +3,7 @@ import { ref, reactive, computed, onMounted, onUnmounted } from 'vue'
 import { clipboard } from '@youngbeen/angle-ctrl'
 import eventBus from '@/EventBus'
 import demoData from '@/demo/demoData'
-import { initMap, resolveBlock, resolveEdge, resolveMarkedOrCrossed, mnQuantaResolve, getLineSum } from '@/utils/core'
+import { initMap, resolveBlock, resolveEdge, resolveAllOne, resolveLonelyNumber, resolveMarkedOrCrossed, mnQuantaResolve, getLineSum } from '@/utils/core'
 import { addToStorage, clearStorage, getStorageByOffset, saveCopy, getSavedCopy } from '@/utils/storage'
 import FollowInput from './FollowInput.vue'
 import FollowIndicator from './FollowIndicator.vue'
@@ -406,6 +406,26 @@ const resolveByEdge = (noSave = false) => {
     versionOffset.value = 0
   }
 }
+const resolveByAllOne = (noSave = false) => {
+  resolveAllOne(puz, answerMap.data).forEach(a => {
+    answerMap.data[a.y][a.x] = a.value
+  })
+  if (!noSave) {
+    const res = addToStorage(answerMap.data, versionOffset.value)
+    versionCount.value = res.length
+    versionOffset.value = 0
+  }
+}
+const resolveByLonelyNumber = (noSave = false) => {
+  resolveLonelyNumber(puz, answerMap.data).forEach(a => {
+    answerMap.data[a.y][a.x] = a.value
+  })
+  if (!noSave) {
+    const res = addToStorage(answerMap.data, versionOffset.value)
+    versionCount.value = res.length
+    versionOffset.value = 0
+  }
+}
 const resolveByMarkedOrCrossed = (noSave = false) => {
   resolveMarkedOrCrossed(puz, answerMap.data).forEach(a => {
     answerMap.data[a.y][a.x] = a.value
@@ -574,6 +594,8 @@ const standardResolve = () => {
   const countBeforeResolve = resolveInfo.value.resolved
   resolveByBlock(true)
   resolveByEdge(true)
+  resolveByAllOne(true)
+  resolveByLonelyNumber(true)
   resolveByMarkedOrCrossed(true)
   const res = addToStorage(answerMap.data, versionOffset.value)
   versionCount.value = res.length
@@ -680,9 +702,11 @@ const restart = () => {
     </p>
     <p class="action-seg" v-show="status === 'resolving'">
       <button @click="standardResolve">Resolve(R / blank space)</button>
-      <!-- <button @click="resolveByBlock">Resolve By Blocks</button>
-      <button @click="resolveByEdge">Resolve By Edge</button>
-      <button @click="resolveByMarkedOrCrossed">Resolve By Marked/Crossed</button> -->
+      <!-- <button @click="resolveByBlock">Resolve By Blocks</button> -->
+      <!-- <button @click="resolveByEdge">Resolve By Edge</button> -->
+      <!-- <button @click="resolveByAllOne">Resolve By All 1</button> -->
+      <!-- <button @click="resolveByLonelyNumber">Resolve By Lonely Number</button> -->
+      <!-- <button @click="resolveByMarkedOrCrossed">Resolve By Marked/Crossed</button> -->
       <button @click="resolveByMn">m**n Resolve({{ estTime }})</button>
     </p>
     <p class="action-seg" v-show="status === 'resolving'">

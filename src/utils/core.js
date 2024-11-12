@@ -324,6 +324,148 @@ export const resolveEdge = (puz, answer) => {
   return result
 }
 
+export const resolveAllOne = (puz, answer) => {
+  // 根据所有项都是1的行/列，将已明确的marked周围标cross
+  const width = puz.top.length
+  const height = puz.left.length
+  const result = [
+    // {
+    //   x: 0,
+    //   y: 0,
+    //   value: '1|0'
+    // }
+  ]
+  puz.top.forEach((col, index) => {
+    if (col.every(c => c === 1)) {
+      for (let j = 0; j < height; j++) {
+        const val = answer[j][index]
+        if (val === '1') {
+          if (j - 1 >= 0) {
+            result.push({
+              x: index,
+              y: j - 1,
+              value: '0'
+            })
+          }
+          if (j + 1 < height) {
+            result.push({
+              x: index,
+              y: j + 1,
+              value: '0'
+            })
+          }
+        }
+      }
+    }
+  })
+  puz.left.forEach((row, index) => {
+    if (row.every(r => r === 1)) {
+      for (let j = 0; j < width; j++) {
+        const val = answer[index][j]
+        if (val === '1') {
+          if (j - 1 >= 0) {
+            result.push({
+              x: j - 1,
+              y: index,
+              value: '0'
+            })
+          }
+          if (j + 1 < width) {
+            result.push({
+              x: j + 1,
+              y: index,
+              value: '0'
+            })
+          }
+        }
+      }
+    }
+  })
+  return result
+}
+
+export const resolveLonelyNumber = (puz, answer) => {
+  // 只有一个数字，将所有之间的未知项连起来，最后处理左右余数之外的全部标cross
+  const width = puz.top.length
+  const height = puz.left.length
+  const result = [
+    // {
+    //   x: 0,
+    //   y: 0,
+    //   value: '1|0'
+    // }
+  ]
+  puz.top.forEach((col, index) => {
+    if (col.length === 1 && col[0] > 0) {
+      let startIndex = -1
+      let endIndex = -1
+      for (let j = 0; j < height; j++) {
+        const val = answer[j][index]
+        if (val === '1') {
+          if (startIndex === -1) {
+            startIndex = j
+          }
+          endIndex = j
+        }
+      }
+      if (startIndex > -1 && endIndex > -1) {
+        const exactMarkedLength = endIndex - startIndex + 1
+        const notSureMarkedLength = col[0] - exactMarkedLength
+        for (let j = 0; j < height; j++) {
+          if (j < startIndex - notSureMarkedLength || j > endIndex + notSureMarkedLength) {
+            result.push({
+              x: index,
+              y: j,
+              value: '0'
+            })
+          } else if (j > startIndex && j < endIndex) {
+            result.push({
+              x: index,
+              y: j,
+              value: '1'
+            })
+          }
+        }
+      }
+    }
+  })
+  puz.left.forEach((row, index) => {
+    if (row.length === 1 && row[0] > 0) {
+      let startIndex = -1
+      let endIndex = -1
+      for (let j = 0; j < width; j++) {
+        const val = answer[index][j]
+        if (val === '1') {
+          if (startIndex === -1) {
+            startIndex = j
+          }
+          endIndex = j
+        }
+      }
+      if (startIndex > -1 && endIndex > -1) {
+        const exactMarkedLength = endIndex - startIndex + 1
+        const notSureMarkedLength = row[0] - exactMarkedLength
+        for (let j = 0; j < width; j++) {
+          if (j < startIndex - notSureMarkedLength || j > endIndex + notSureMarkedLength) {
+            result.push({
+              x: j,
+              y: index,
+              value: '0'
+            })
+          } else if (j > startIndex && j < endIndex) {
+            result.push({
+              x: j,
+              y: index,
+              value: '1'
+            })
+          }
+        }
+      }
+    }
+  })
+  return result
+}
+
 export const resolveMarkedOrCrossed = (puz, answer) => {
   // 方法根据行列内已经明确了所有的marked，或者所有待明确的全部应该是marked的情况，进行剩余的填充
   const result = [
