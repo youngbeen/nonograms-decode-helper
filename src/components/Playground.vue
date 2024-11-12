@@ -122,6 +122,7 @@ const listenKeyStroke = (event) => {
       standardResolve()
     } else if (e.keyCode === 82) {
       // 输入状态下r键重复上一次输入
+      e.preventDefault()
       repeatLastInput()
     }
   }
