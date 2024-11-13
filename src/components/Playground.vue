@@ -392,6 +392,8 @@ const startDecode = () => {
   versionCount.value = 0
   versionOffset.value = 0
   clearStorage()
+  panelLeft.value = panelPositionSave.left
+  panelTop.value = panelPositionSave.top
   // 自动调用一次基础解析
   standardResolve()
 }
@@ -655,9 +657,13 @@ const loadString = () => {
     clearStorage()
     versionCount.value = 1
     versionOffset.value = 0
+    panelLeft.value = panelPositionSave.left
+    panelTop.value = panelPositionSave.top
   }
 }
 const restart = () => {
+  panelPositionSave.left = panelLeft.value
+  panelPositionSave.top = panelTop.value
   status.value = 'init'
   answerMap.data = []
   puz.top = []
@@ -667,12 +673,50 @@ const restart = () => {
   clearStorage()
   versionCount.value = 0
   versionOffset.value = 0
+  panelLeft.value = 0
+  panelTop.value = 0
+}
+// 处理拖拽相关
+const panelPositionSave = reactive({
+  left: 0,
+  top: 0
+})
+const panelLeft = ref(0)
+const panelTop = ref(0)
+const dragStartX = ref(-1)
+const dragStartY = ref(-1)
+const handleDragStart = (e) => {
+  if (status.value === 'resolving') {
+    // console.log('start', e)
+    dragStartX.value = e.clientX
+    dragStartY.value = e.clientY
+  }
+  // e.dataTransfer.dropEffect = 'move'
+}
+const handleDragEnd = (e) => {
+  if (status.value === 'resolving') {
+    // console.log('end', e)
+    if (dragStartX.value > -1 && dragStartY.value > -1) {
+      const divX = e.clientX - dragStartX.value
+      const divY = e.clientY - dragStartY.value
+      panelLeft.value += divX
+      panelTop.value += divY
+      console.log(divX, divY)
+    }
+  }
 }
 </script>
 
 <template>
   <div class="action-panel"
-    :class="[status === 'resolving' && 'right']">
+    :class="[status === 'resolving' && 'right']"
+    :style="{
+      left: panelLeft + 'px',
+      top: panelTop + 'px'
+    }"
+    draggable="true"
+    @dragstart="handleDragStart"
+    @dragend="handleDragEnd">
     <div class="init-panel"
       v-show="status === 'init'">
       <input class="number-input" type="text"
@@ -818,18 +862,19 @@ const restart = () => {
 .action-panel {
   position: fixed;
   z-index: 9;
-  left: 0;
-  top: 0;
-  right: 0;
-  height: 160px;
+  /* left: 0;
+  top: 0; */
+  /* right: 0; */
+  width: 100%;
+  height: 200px;
   padding: 16px 32px;
   background: #fff;
   border: 2px solid rgb(170, 190, 255);
 }
 .action-panel.right {
-  left: auto;
+  /* left: auto;
   top: 0;
-  right: 0;
+  right: 0; */
   width: 240px;
   height: auto;
 }
