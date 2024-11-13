@@ -4,7 +4,7 @@ import { clipboard } from '@youngbeen/angle-ctrl'
 import eventBus from '@/EventBus'
 import demoData from '@/demo/demoData'
 import { initMap, resolveBlock, resolveEdge, resolveAllOne, resolveLonelyNumber, resolveMarkedOrCrossed, mnQuantaResolve, getLineSum } from '@/utils/core'
-import { addToStorage, clearStorage, getStorageByOffset, saveCopy, getSavedCopy } from '@/utils/storage'
+import { addToStorage, clearStorage, getStorageByOffset, saveCopy, getSavedCopy, savePreset, getPreset } from '@/utils/storage'
 import FollowInput from './FollowInput.vue'
 import FollowIndicator from './FollowIndicator.vue'
 import FlyTopIndicator from './FlyTopIndicator.vue'
@@ -96,6 +96,12 @@ const checkTopNumberScrollOut = () => {
   }
 }
 onMounted(() => {
+  // 恢复用户偏好设置
+  const userPreset = getPreset()
+  if (userPreset.panelPositionSave) {
+    panelPositionSave.left = userPreset.panelPositionSave.left
+    panelPositionSave.top = userPreset.panelPositionSave.top
+  }
   eventBus.on('doneFollowInput', ({ value, tag }) => {
     if (tag) {
       const [action, location, index] = tag.split('-')
@@ -664,6 +670,12 @@ const loadString = () => {
 const restart = () => {
   panelPositionSave.left = panelLeft.value
   panelPositionSave.top = panelTop.value
+  savePreset({
+    panelPositionSave: {
+      left: panelPositionSave.left,
+      top: panelPositionSave.top,
+    }
+  })
   status.value = 'init'
   answerMap.data = []
   puz.top = []

@@ -43,3 +43,14 @@ export const getSavedCopy = () => {
     return null
   }
 }
+
+export const savePreset = (newContent) => {
+  let data = JSON.parse(window.localStorage.getItem('userPreset') || '{}')
+  data = Object.assign({}, data, newContent)
+  window.localStorage.setItem('userPreset', JSON.stringify(data))
+}
+
+export const getPreset = () => {
+  const data = JSON.parse(window.localStorage.getItem('userPreset') || '{}')
+  return data
+}
