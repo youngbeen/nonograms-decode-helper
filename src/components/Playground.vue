@@ -89,7 +89,7 @@ const isElementScrolledOut = (element, topMargin = 0) => {
 }
 const checkTopNumberScrollOut = () => {
   const element = document.querySelector('.box-top-indicators')
-  if (isElementScrolledOut(element, 160)) {
+  if (isElementScrolledOut(element, 200)) {
     isTopNumbersShow.value = false
   } else {
     isTopNumbersShow.value = true
@@ -156,7 +156,7 @@ const repeatLastInput = () => {
   if (lastInput.position === 'left') {
     if (leftInputContent.value.replace(/r/, '') === lastInput.content) {
       leftInputContent.value = lastInput.llContent
-    } else if (leftInputContent.value.replace(/r/, '') === lastInput.llContent) {
+    } else if (leftInputContent.value.replace(/r/, '') === lastInput.llContent && lastInput.llContent !== '') {
       leftInputContent.value = lastInput.lllContent
     } else {
       leftInputContent.value = lastInput.content
@@ -164,7 +164,7 @@ const repeatLastInput = () => {
   } else if (lastInput.position === 'top') {
     if (topInputContent.value.replace(/r/, '') === lastInput.content) {
       topInputContent.value = lastInput.llContent
-    } else if (topInputContent.value.replace(/r/, '') === lastInput.llContent) {
+    } else if (topInputContent.value.replace(/r/, '') === lastInput.llContent && lastInput.llContent !== '') {
       topInputContent.value = lastInput.lllContent
     } else {
       topInputContent.value = lastInput.content
@@ -883,7 +883,7 @@ const handleDragEnd = (e) => {
   border-bottom: 1px solid rgb(237, 237, 237);
 }
 .box-main {
-  margin-top: 160px;
+  margin-top: 200px;
 }
 .box-main.free {
   margin-top: auto;
