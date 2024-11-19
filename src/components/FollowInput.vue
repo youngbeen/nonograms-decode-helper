@@ -7,15 +7,15 @@ const isShow = ref(false)
 const x = ref(0)
 const y = ref(0)
 const inputValue = ref('')
-const tag = ref('')
+let callbackFn = () => {}
 
 onMounted(() => {
   eventBus.on('notifyShowFollowInput', params => {
-    console.log('show follow input', params)
+    // console.log('show follow input', params)
     x.value = params.x || 0
     y.value = params.y || 0
     inputValue.value = params.value.join(' ')
-    tag.value = params.tag
+    callbackFn = params.callback || (() => {})
     isShow.value = true
   })
 })
@@ -25,13 +25,12 @@ onBeforeUnmount(() => {
 })
 
 const submit = () => {
-  eventBus.emit('doneFollowInput', {
-    value: inputValue.value,
-    tag: tag.value
-  })
+  if (callbackFn) {
+    callbackFn(inputValue.value)
+  }
   isShow.value = false
   inputValue.value = ''
-  tag.value = ''
+  callbackFn = () => {}
 }
 </script>
 
@@ -49,6 +48,7 @@ const submit = () => {
 <style scoped>
 .box-follow-input {
   position: fixed;
+  z-index: 3;
   padding: 1rem;
   border: 1px solid rgb(170, 190, 255);
   background: #fff;

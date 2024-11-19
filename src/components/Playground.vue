@@ -5,6 +5,7 @@ import eventBus from '@/EventBus'
 import demoData from '@/demo/demoData'
 import { initMap, resolveBlock, resolveEdge, resolveAllOne, resolveLonelyNumber, resolveMarkedOrCrossed, mnQuantaResolve, getLineSum } from '@/utils/core'
 import { addToStorage, clearStorage, getStorageByOffset, saveCopy, getSavedCopy, savePreset, getPreset } from '@/utils/storage'
+import FollowMenu from './FollowMenu.vue'
 import FollowInput from './FollowInput.vue'
 import FollowIndicator from './FollowIndicator.vue'
 import FlyTopIndicator from './FlyTopIndicator.vue'
@@ -102,21 +103,10 @@ onMounted(() => {
     panelPositionSave.left = userPreset.panelPositionSave.left
     panelPositionSave.top = userPreset.panelPositionSave.top
   }
-  eventBus.on('doneFollowInput', ({ value, tag }) => {
-    if (tag) {
-      const [action, location, index] = tag.split('-')
-      if (action === 'editNumber') {
-        const fixedVal = value.replace(/[^\d\s,/]/g, '').replace(/[\s/]/g, ',').replace(/,{2,}/g, ',').replace(/^,/, '').replace(/,$/, '')
-        const ary = fixedVal.split(',')
-        puz[location][index] = ary.map(item => parseInt(item, 10))
-      }
-    }
-  })
   window.addEventListener('scroll', checkTopNumberScrollOut)
   window.addEventListener('keydown', listenKeyStroke)
 })
 onUnmounted(() => {
-  eventBus.off('doneFollowInput')
   window.removeEventListener('scroll', checkTopNumberScrollOut)
   window.removeEventListener('keydown', listenKeyStroke)
 })
@@ -281,16 +271,36 @@ const loadDemo = (mode) => {
   puz.top = data.top
   puz.left = data.left
 }
-const handleClickEdit = (location, index, e) => {
-  const res = window.confirm('Do you want to edit or copy? Yes - Edit, Cancel - Copy')
-  if (res) {
-    // edit
-    editNumber(location, index, e)
-  } else {
-    // copy
-    const toCopy = puz[location][index]
-    puz[location].splice(index, 0, toCopy)
+const handleShowDropdownMenu = (location, index, e) => {
+  // console.log(location, index, e)
+  if (status.value !== 'init') {
+    return
   }
+  eventBus.emit('notifyShowFollowMenu', {
+    x: e.clientX,
+    y: e.clientY,
+    value: puz[location][index],
+    callback: (action) => {
+      switch (action) {
+        case 'edit':
+          editNumber(location, index, e)
+          break
+        case 'cloneToNext': {
+          const toCopy = puz[location][index]
+          puz[location].splice(index, 0, toCopy)
+          break
+        }
+        case 'cloneToAdd': {
+          const toCopy = puz[location][index]
+          puz[location].push(toCopy)
+          break
+        }
+        case 'delete':
+          deleteNumber(location, index)
+          break
+      }
+    }
+  })
 }
 const editNumber = (location, index, e) => {
   // console.log(e)
@@ -298,7 +308,11 @@ const editNumber = (location, index, e) => {
     x: e.clientX,
     y: e.clientY,
     value: puz[location][index],
-    tag: `editNumber-${location}-${index}`
+    callback: (value) => {
+      const fixedVal = value.replace(/[^\d\s,/]/g, '').replace(/[\s/]/g, ',').replace(/,{2,}/g, ',').replace(/^,/, '').replace(/,$/, '')
+      const ary = fixedVal.split(',')
+      puz[location][index] = ary.map(item => parseInt(item, 10))
+    }
   })
 }
 const deleteNumber = (location, index) => {
@@ -535,18 +549,19 @@ const handleGroupNumber = (e) => {
     }
     // console.log('col', colCount, 'row', rowCount, e)
     if (rowCount > 4 || colCount > 4) {
-      let content = ''
-      if (rowCount > 4 && colCount > 4) {
-        content = `—${rowCount} |${colCount}`
-      } else if (rowCount > 4) {
-        content = `—${rowCount}`
-      } else {
-        content = `|${colCount}`
+      let contentHorizon = ''
+      let contentVertical = ''
+      if (rowCount > 4) {
+        contentHorizon = `${rowCount}`
+      }
+      if (colCount > 4) {
+        contentVertical = `${colCount}`
       }
       eventBus.emit('notifyShowFollowIndicator', {
         x: e.clientX,
         y: e.clientY,
-        content
+        content: contentHorizon,
+        contentSide: contentVertical
       })
     }
   } else {
@@ -804,40 +819,36 @@ const handleDragEnd = (e) => {
     <div class="box-top-indicators">
       <div class="box-top-indi"
         :class="[focusColIndex === index && 'focus', answerMapCalc.top.length && t.length < answerMapCalc.top[index].length && 'danger']"
-        v-for="(t, index) in puz.top" :key="index">
-        <svg class="icon-btn icon-edit"
+        v-for="(t, index) in puz.top" :key="index"
+        @dblclick.prevent="status === 'init' && editNumber('top', index, $event)"
+        @click.right.prevent="handleShowDropdownMenu('top', index, $event)">
+        <svg class="icon-btn icon-more"
           v-show="status === 'init'"
-          @click="handleClickEdit('top', index, $event)"
-          xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M15.7279 9.57627L14.3137 8.16206L5 17.4758V18.89H6.41421L15.7279 9.57627ZM17.1421 8.16206L18.5563 6.74785L17.1421 5.33363L15.7279 6.74785L17.1421 8.16206ZM7.24264 20.89H3V16.6473L16.435 3.21231C16.8256 2.82179 17.4587 2.82179 17.8492 3.21231L20.6777 6.04074C21.0682 6.43126 21.0682 7.06443 20.6777 7.45495L7.24264 20.89Z"></path></svg>
+          @click="handleShowDropdownMenu('top', index, $event)"
+          xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3C10.9 3 10 3.9 10 5C10 6.1 10.9 7 12 7C13.1 7 14 6.1 14 5C14 3.9 13.1 3 12 3ZM12 17C10.9 17 10 17.9 10 19C10 20.1 10.9 21 12 21C13.1 21 14 20.1 14 19C14 17.9 13.1 17 12 17ZM12 10C10.9 10 10 10.9 10 12C10 13.1 10.9 14 12 14C13.1 14 14 13.1 14 12C14 10.9 13.1 10 12 10Z"></path></svg>
         <div class="cell"
           :class="[answerMapCalc.top.length && n !== answerMapCalc.top[index][nindex] && 'danger']"
           v-for="(n, nindex) in t" :key="nindex">
           {{ n }}
         </div>
-        <svg class="icon-btn danger icon-delete"
-          v-show="status === 'init'"
-          @click="deleteNumber('top', index)"
-          xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M17 6H22V8H20V21C20 21.5523 19.5523 22 19 22H5C4.44772 22 4 21.5523 4 21V8H2V6H7V3C7 2.44772 7.44772 2 8 2H16C16.5523 2 17 2.44772 17 3V6ZM18 8H6V20H18V8ZM13.4142 13.9997L15.182 15.7675L13.7678 17.1817L12 15.4139L10.2322 17.1817L8.81802 15.7675L10.5858 13.9997L8.81802 12.232L10.2322 10.8178L12 12.5855L13.7678 10.8178L15.182 12.232L13.4142 13.9997ZM9 4V6H15V4H9Z"></path></svg>
       </div>
     </div>
     <div style="position: relative; top: 2px;">
       <div class="box-left-indicators">
         <div class="box-left-indi"
           :class="[focusRowIndex === index && 'focus', answerMapCalc.left.length && l.length < answerMapCalc.left[index].length && 'danger']"
-          v-for="(l, index) in puz.left" :key="index">
-          <svg class="icon-btn icon-edit"
+          v-for="(l, index) in puz.left" :key="index"
+          @dblclick.prevent="status === 'init' && editNumber('left', index, $event)"
+          @click.right.prevent="handleShowDropdownMenu('left', index, $event)">
+          <svg class="icon-btn icon-more"
             v-show="status === 'init'"
-            @click="handleClickEdit('left', index, $event)"
-            xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M15.7279 9.57627L14.3137 8.16206L5 17.4758V18.89H6.41421L15.7279 9.57627ZM17.1421 8.16206L18.5563 6.74785L17.1421 5.33363L15.7279 6.74785L17.1421 8.16206ZM7.24264 20.89H3V16.6473L16.435 3.21231C16.8256 2.82179 17.4587 2.82179 17.8492 3.21231L20.6777 6.04074C21.0682 6.43126 21.0682 7.06443 20.6777 7.45495L7.24264 20.89Z"></path></svg>
+            @click="handleShowDropdownMenu('left', index, $event)"
+            xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M5 10C3.9 10 3 10.9 3 12C3 13.1 3.9 14 5 14C6.1 14 7 13.1 7 12C7 10.9 6.1 10 5 10ZM19 10C17.9 10 17 10.9 17 12C17 13.1 17.9 14 19 14C20.1 14 21 13.1 21 12C21 10.9 20.1 10 19 10ZM12 10C10.9 10 10 10.9 10 12C10 13.1 10.9 14 12 14C13.1 14 14 13.1 14 12C14 10.9 13.1 10 12 10Z"></path></svg>
           <div class="cell"
             :class="[answerMapCalc.left.length && n !== answerMapCalc.left[index][nindex] && 'danger']"
             v-for="(n, nindex) in l" :key="nindex">
             {{ n }}
           </div>
-          <svg class="icon-btn danger icon-delete"
-            v-show="status === 'init'"
-            @click="deleteNumber('left', index)"
-            xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M17 6H22V8H20V21C20 21.5523 19.5523 22 19 22H5C4.44772 22 4 21.5523 4 21V8H2V6H7V3C7 2.44772 7.44772 2 8 2H16C16.5523 2 17 2.44772 17 3V6ZM18 8H6V20H18V8ZM13.4142 13.9997L15.182 15.7675L13.7678 17.1817L12 15.4139L10.2322 17.1817L8.81802 15.7675L10.5858 13.9997L8.81802 12.232L10.2322 10.8178L12 12.5855L13.7678 10.8178L15.182 12.232L13.4142 13.9997ZM9 4V6H15V4H9Z"></path></svg>
         </div>
       </div>
       <div class="box-canvas"
@@ -857,6 +868,8 @@ const handleDragEnd = (e) => {
       </div>
     </div>
   </div>
+
+  <follow-menu></follow-menu>
 
   <follow-input></follow-input>
 
@@ -910,6 +923,7 @@ button:not(:last-of-type) {
 }
 .box-top-indicators {
   margin-left: 262px;
+  user-select: none;
 }
 .box-top-indi {
   position: relative;
@@ -937,6 +951,7 @@ button:not(:last-of-type) {
   left: 0;
   top: 0;
   width: 260px;
+  user-select: none;
 }
 .box-left-indi {
   position: relative;
@@ -983,10 +998,10 @@ button:not(:last-of-type) {
   cursor: pointer;
   transition: all 0.3s;
 }
-.icon-btn.danger {
+/* .icon-btn.danger {
   background: rgb(255, 124, 124);
-}
-.icon-edit {
+} */
+.icon-more {
   position: absolute;
   z-index: 2;
   left: 5px;
@@ -994,20 +1009,20 @@ button:not(:last-of-type) {
   box-shadow: 1px 1px 2px rgba(115, 155, 155, 0.8);
   opacity: 0;
 }
-.icon-delete {
+/* .icon-delete {
   position: absolute;
   z-index: 2;
   left: 5px;
   bottom: -16px;
   box-shadow: 1px 1px 2px rgba(115, 155, 155, 0.8);
   opacity: 0;
-}
-.box-left-indi > .icon-edit {
+} */
+/* .box-left-indi > .icon-edit {
   left: auto;
   right: -16px;
   top: 5px;
-}
-.box-left-indi > .icon-delete {
+} */
+.box-left-indi > .icon-more {
   left: -16px;
   top: 5px;
 }
