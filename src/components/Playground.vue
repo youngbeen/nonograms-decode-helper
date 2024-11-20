@@ -9,6 +9,7 @@ import FollowMenu from './FollowMenu.vue'
 import FollowInput from './FollowInput.vue'
 import FollowIndicator from './FollowIndicator.vue'
 import FlyTopIndicator from './FlyTopIndicator.vue'
+import InputAssist from './InputAssist.vue'
 // const debounce = (fn, ms = 0) => {
 //   let timeoutId
 //   return function (...args) {
@@ -33,7 +34,8 @@ let lastInput = reactive({
   content: '',
   llContent: '',
   lllContent: '',
-  position: 'left'
+  position: 'left',
+  history: []
 })
 let puz = reactive({
   top: [
@@ -123,28 +125,59 @@ const listenKeyStroke = (event) => {
     }
   }
 }
+const handleFocusInput = (e, location) => {
+  if (status.value !== 'init') {
+    return
+  }
+  eventBus.emit('notifyShowInputAssist', {
+    x: e.target.offsetLeft,
+    y: e.target.offsetTop + e.target.clientHeight,
+    tag: location,
+    callback: (content) => {
+      // console.log(content)
+      if (location === 'left') {
+        leftInputContent.value += content
+      } else if (location === 'top') {
+        topInputContent.value += content
+      }
+    }
+  })
+}
+const handleBlurInput = (location) => {
+  // NOTE 添加延时是为了避免过早销毁里面的事件执行
+  setTimeout(() => {
+    eventBus.emit('notifyHideInputAssist', location)
+  }, 100)
+}
 const handleInput = (e, location) => {
-  // console.log(e, position)
+  // console.log(e.keyCode, location)
   if (e.keyCode === 13) {
     // 侦听输入栏敲击enter
     submit(location)
-  } else if (e.keyCode === 65) {
-    // 侦听a，对应转换为1-0
+  } else if (e.ctrlKey) {
+    // console.log('ctrl' + e.keyCode)
     e.preventDefault()
-    if (location === 'left') {
-      leftInputContent.value += '1-0'
-    } else if (location === 'top') {
-      topInputContent.value += '1-0'
+    if (e.keyCode >= 48 && e.keyCode <= 57) {
+      // 侦听ctrl + 1~0，对应转换为1*1到1*10
+      let countContent = e.keyCode - 48
+      countContent === 0 && (countContent = '91')
+      const simuInputNumber = `1*${countContent}`
+      if (location === 'left') {
+        leftInputContent.value += simuInputNumber
+      } else if (location === 'top') {
+        topInputContent.value += simuInputNumber
+      }
     }
-  } else if (e.keyCode >= 112 && e.keyCode <= 121) {
-    // 侦听F1~F10，对应转换为1-1 到 2-0
+  } else if (e.altKey) {
     e.preventDefault()
-    let simuInputNumber = (e.keyCode - 101).toString()
-    simuInputNumber = simuInputNumber.split('').join('-')
-    if (location === 'left') {
-      leftInputContent.value += simuInputNumber
-    } else if (location === 'top') {
-      topInputContent.value += simuInputNumber
+    if (e.keyCode >= 48 && e.keyCode <= 57) {
+      // 侦听alt + 1~0，对应转换为1-1到1-0
+      const simuInputNumber = `1-${(e.keyCode - 48)}`
+      if (location === 'left') {
+        leftInputContent.value += simuInputNumber
+      } else if (location === 'top') {
+        topInputContent.value += simuInputNumber
+      }
     }
   }
 }
@@ -179,6 +212,16 @@ const submit = (location) => {
         lastInput.content = leftInputContent.value
       }
       lastInput.position = 'left'
+      // 整理历史数据
+      const sameIndex = lastInput.history.indexOf(leftInputContent.value)
+      if (sameIndex > -1) {
+        lastInput.history.splice(sameIndex, 1)
+      } else {
+        if (lastInput.history.length >= 10) {
+          lastInput.history.pop()
+        }
+      }
+      lastInput.history.unshift(leftInputContent.value)
       leftInputContent.value = ''
     }
   } else if (location === 'top') {
@@ -192,6 +235,16 @@ const submit = (location) => {
         lastInput.content = topInputContent.value
       }
       lastInput.position = 'top'
+      // 整理历史数据
+      const sameIndex = lastInput.history.indexOf(topInputContent.value)
+      if (sameIndex > -1) {
+        lastInput.history.splice(sameIndex, 1)
+      } else {
+        if (lastInput.history.length >= 10) {
+          lastInput.history.pop()
+        }
+      }
+      lastInput.history.unshift(topInputContent.value)
       topInputContent.value = ''
     }
   }
@@ -728,7 +781,7 @@ const handleDragEnd = (e) => {
       const divY = e.clientY - dragStartY.value
       panelLeft.value += divX
       panelTop.value += divY
-      console.log(divX, divY)
+      // console.log(divX, divY)
     }
   }
 }
@@ -749,11 +802,15 @@ const handleDragEnd = (e) => {
       <input class="number-input" type="text"
         v-model="leftInputContent"
         @keydown="handleInput($event, 'left')"
+        @focus="handleFocusInput($event, 'left')"
+        @blur="handleBlurInput('left')"
         placeholder="👈left"
         style="margin-right: 1rem;">
       <input class="number-input" type="text"
         v-model="topInputContent"
         @keydown="handleInput($event, 'top')"
+        @focus="handleFocusInput($event, 'top')"
+        @blur="handleBlurInput('top')"
         placeholder="👇top"
         style="margin-right: 1rem;">
       <span style="display: inline-flex; align-items: center; margin-right: 1rem;">
@@ -764,7 +821,7 @@ const handleDragEnd = (e) => {
         v-show="status === 'init'">
         <div class="cs-tip">
           <div class="tip" v-show="!isFastMode">Valid format is like 3 3 1 or 3,3,1 or 3/3/1. Hit "enter" to confirm</div>
-          <div class="tip" v-show="isFastMode">Valid format is like 331(stands for 3,3,1), 1-4(stands for 14), 1*3(stands for 1,1,1), type F1~F10 stands for 1-1 2-0, type 'a' stands for 1-0</div>
+          <div class="tip" v-show="isFastMode">Valid format is like 331(stands for 3,3,1), 1-4(stands for 14), 1*3(stands for 1,1,1), type alt+1~0 stands for 1-1~1-0, type ctrl+1~0 stands for 1*1~1*91</div>
         </div>
       </div>
     </div>
@@ -881,6 +938,9 @@ const handleDragEnd = (e) => {
     :is-danger="answerMapCalc.top && answerMapCalc.top.length && focusColPuz && focusColPuz.length < answerMapCalc.top[focusColIndex].length"
     :answer-map-calc="answerMapCalc"
     :data="focusColPuz"></fly-top-indicator>
+
+  <input-assist
+    :menu="lastInput.history"></input-assist>
 </template>
 
 <style scoped>
