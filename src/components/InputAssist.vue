@@ -71,12 +71,12 @@ const handleSelect = (content) => {
       @mouseout="hoverIndex = -1"
       @click="handleSelectRepeatContent(i)"
       v-for="i in 10" :key="i">{{ i }}</span> * {{ num }}
-    <hr>
+    <!-- <hr>
     <div class="menu-item"
       v-for="(m, index) in props.menu" :key="index"
       @click="handleSelect(m)">
       {{ m }}
-    </div>
+    </div> -->
   </div>
 </template>
 
