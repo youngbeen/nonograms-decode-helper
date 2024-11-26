@@ -1042,9 +1042,11 @@ button:not(:last-of-type) {
   text-align: center;
 }
 .cell.danger {
-  border: 1px dashed red;
-  border-radius: 50%;
-  /* color: red; */
+  color: red;
+  /* border: 1px dashed red; */
+  /* border-radius: 50%; */
+  text-decoration: underline;
+  font-weight: bold;
 }
 .box-left-indi > .cell {
   display: inline-block;
@@ -1134,9 +1136,11 @@ button:not(:last-of-type) {
 }
 .clk-cell.style-1 {
   background: rgb(52, 52, 186);
+  /* box-shadow: -2px -2px 5px #fff, 2px 2px 5px #babecc; */
 }
 .clk-cell.style-0 {
   background: rgb(235, 235, 235);
+  box-shadow: inset 1px 1px 2px #babecc, inset -1px -1px 2px #fff;
 }
 .clk-cell.style-0:before {
   content: "×";
@@ -1147,7 +1151,7 @@ button:not(:last-of-type) {
   bottom: 0;
   z-index: 1;
   line-height: 24px;
-  color: rgb(152, 152, 152);
+  color: rgb(185, 185, 185);
   font-size: 28px;
   text-align: center;
 }
