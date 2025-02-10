@@ -1,9 +1,10 @@
 <script setup>
 import { ref, reactive, computed, onMounted, onUnmounted } from 'vue'
+import { useRoute } from 'vue-router'
 import { clipboard } from '@youngbeen/angle-ctrl'
 import eventBus from '@/EventBus'
 import demoData from '@/demo/demoData'
-import { initMap, resolveBlock, resolveEdge, resolveAllOne, resolveLonelyNumber, resolveMarkedOrCrossed, mnQuantaResolve, getLineSum } from '@/utils/core'
+import { initMap, resolveBlock, resolveEdge, resolveMaxNumber, resolveAllOne, resolveLonelyNumber, resolveMarkedOrCrossed, mnQuantaResolve, getLineSum } from '@/utils/core'
 import { addToStorage, clearStorage, getStorageByOffset, saveCopy, getSavedCopy, savePreset, getPreset } from '@/utils/storage'
 import FollowMenu from './FollowMenu.vue'
 import FollowInput from './FollowInput.vue'
@@ -18,6 +19,7 @@ import InputAssist from './InputAssist.vue'
 //   }
 // }
 
+const debug = ref(false)
 let status = ref('init') // init | resolving
 const answerMap = reactive({
   data: [
@@ -99,6 +101,10 @@ const checkTopNumberScrollOut = () => {
   }
 }
 onMounted(() => {
+  const route = useRoute()
+  if (route.query.debug === '1') {
+    debug.value = true
+  }
   // 恢复用户偏好设置
   const userPreset = getPreset()
   if (userPreset.panelPositionSave) {
@@ -490,8 +496,8 @@ const resolveByEdge = (noSave = false) => {
     versionOffset.value = 0
   }
 }
-const resolveByAllOne = (noSave = false) => {
-  resolveAllOne(puz, answerMap.data).forEach(a => {
+const resolveByMaxNumber = (noSave = false) => {
+  resolveMaxNumber(puz, answerMap.data).forEach(a => {
     answerMap.data[a.y][a.x] = a.value
   })
   if (!noSave) {
@@ -679,7 +685,7 @@ const standardResolve = () => {
   const countBeforeResolve = resolveInfo.value.resolved
   resolveByBlock(true)
   resolveByEdge(true)
-  resolveByAllOne(true)
+  resolveByMaxNumber(true)
   resolveByLonelyNumber(true)
   resolveByMarkedOrCrossed(true)
   const res = addToStorage(answerMap.data, versionOffset.value)
@@ -838,13 +844,13 @@ const handleDragEnd = (e) => {
       <button @click="loadDemo('hard')">Load Hard Demo</button>
     </p>
     <p class="action-seg" v-show="status === 'resolving'">
-      <button @click="standardResolve">Resolve(R / blank space)</button>
-      <!-- <button @click="resolveByBlock">Resolve By Blocks</button> -->
-      <!-- <button @click="resolveByEdge">Resolve By Edge</button> -->
-      <!-- <button @click="resolveByAllOne">Resolve By All 1</button> -->
-      <!-- <button @click="resolveByLonelyNumber">Resolve By Lonely Number</button> -->
-      <!-- <button @click="resolveByMarkedOrCrossed">Resolve By Marked/Crossed</button> -->
-      <button @click="resolveByMn">m**n Resolve({{ estTime }})</button>
+      <button v-show="debug" @click="standardResolve">Resolve(R / blank space)</button>
+      <button v-show="debug" @click="resolveByBlock">Resolve By Blocks</button>
+      <button v-show="debug" @click="resolveByEdge">Resolve By Edge</button>
+      <button v-show="debug" @click="resolveByMaxNumber">Resolve By Max Number</button>
+      <button v-show="debug" @click="resolveByLonelyNumber">Resolve By Lonely Number</button>
+      <button v-show="debug" @click="resolveByMarkedOrCrossed">Resolve By Marked/Crossed</button>
+      <button v-show="debug" @click="resolveByMn">m**n Resolve({{ estTime }})</button>
     </p>
     <p class="action-seg" v-show="status === 'resolving'">
       <button v-show="versionOffset > -1 * (versionCount - 1)"

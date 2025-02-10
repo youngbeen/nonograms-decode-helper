@@ -268,6 +268,13 @@ export const resolveEdge = (puz, answer) => {
             value: '1'
           })
         }
+        if (firstMarkedIndex === 0) {
+          result.push({
+            x: firstMarkedIndex + exactHeadSureLength + 1,
+            y: index,
+            value: '0'
+          })
+        }
       }
       if (lastMarkedIndex > -1 && fixedRow.length > 1) {
         // 判断尾
@@ -277,6 +284,13 @@ export const resolveEdge = (puz, answer) => {
             x: lastMarkedIndex - i,
             y: index,
             value: '1'
+          })
+        }
+        if (lastMarkedIndex === width - 1) {
+          result.push({
+            x: lastMarkedIndex - exactTailSureLength - 1,
+            y: index,
+            value: '0'
           })
         }
       }
@@ -307,6 +321,13 @@ export const resolveEdge = (puz, answer) => {
             value: '1'
           })
         }
+        if (firstMarkedIndex === 0) {
+          result.push({
+            x: index,
+            y: firstMarkedIndex + exactHeadSureLength + 1,
+            value: '0'
+          })
+        }
       }
       if (lastMarkedIndex > -1 && fixedCol.length > 1) {
         // 判断尾
@@ -318,12 +339,101 @@ export const resolveEdge = (puz, answer) => {
             value: '1'
           })
         }
+        if (lastMarkedIndex === width - 1) {
+          result.push({
+            x: index,
+            y: lastMarkedIndex - exactTailSureLength - 1,
+            value: '0'
+          })
+        }
       }
     }
   })
   return result
 }
 
+export const resolveMaxNumber = (puz, answer) => {
+  // 方法根据最大的数字不管有几个，只要已经出现了连续最大数字个marked格子，则两边必定为cross
+  const width = puz.top.length
+  const height = puz.left.length
+  const result = [
+    // {
+    //   x: 0,
+    //   y: 0,
+    //   value: '1|0'
+    // }
+  ]
+  puz.left.forEach((row, index) => {
+    // line is like [4, 1, 2]
+    if (!isLineClear('row', answer, index)) {
+      const maxNumber = Math.max(...row)
+      let firstMarkedIndex = -1
+      let combinedMarks = 0
+      for (let i = 0; i < width; i++) {
+        if (answer[index][i] === '1') {
+          combinedMarks === 0 && (firstMarkedIndex = i)
+          combinedMarks++
+        } else {
+          if (combinedMarks >= maxNumber) {
+            if (combinedMarks > maxNumber) {
+              console.warn(`Invalid answer in row ${index}, maxNumber is ${maxNumber} but found ${combinedMarks}`)
+            }
+            if (firstMarkedIndex > 0) {
+              result.push({
+                x: firstMarkedIndex - 1,
+                y: index,
+                value: '0'
+              })
+            }
+            result.push({
+              x: i,
+              y: index,
+              value: '0'
+            })
+          }
+          firstMarkedIndex = -1
+          combinedMarks = 0
+        }
+      }
+    }
+  })
+  puz.top.forEach((col, index) => {
+    if (!isLineClear('column', answer, index)) {
+      const maxNumber = Math.max(...col)
+      let firstMarkedIndex = -1
+      let combinedMarks = 0
+      for (let i = 0; i < height; i++) {
+        if (answer[i][index] === '1') {
+          combinedMarks === 0 && (firstMarkedIndex = i)
+          combinedMarks++
+        } else {
+          if (combinedMarks >= maxNumber) {
+            if (combinedMarks > maxNumber) {
+              console.warn(`Invalid answer in col ${index}, maxNumber is ${maxNumber} but found ${combinedMarks}`)
+            }
+            if (firstMarkedIndex > 0) {
+              result.push({
+                x: index,
+                y: firstMarkedIndex - 1,
+                value: '0'
+              })
+            }
+            result.push({
+              x: index,
+              y: i,
+              value: '0'
+            })
+          }
+          firstMarkedIndex = -1
+          combinedMarks = 0
+        }
+      }
+    }
+  })
+  return result
+}
+
+// NOTE 此策略已经被resolveMaxNumber涵盖了，已废弃
 export const resolveAllOne = (puz, answer) => {
   // 根据所有项都是1的行/列，将已明确的marked周围标cross
   const width = puz.top.length
