@@ -4,7 +4,7 @@ import { useRoute } from 'vue-router'
 import { clipboard } from '@youngbeen/angle-ctrl'
 import eventBus from '@/EventBus'
 import demoData from '@/demo/demoData'
-import { initMap, resolveBlock, resolveEdge, resolveMaxNumber, resolveAllOne, resolveLonelyNumber, resolveMarkedOrCrossed, mnQuantaResolve, getLineSum } from '@/utils/core'
+import { initMap, resolveBlock, resolveEdge, resolveMaxNumber, resolveSmallSideSpace, resolveLonelyNumber, resolveSplitMarkedPieces, resolveMarkedOrCrossed, mnQuantaResolve, getLineSum } from '@/utils/core'
 import { addToStorage, clearStorage, getStorageByOffset, saveCopy, getSavedCopy, savePreset, getPreset } from '@/utils/storage'
 import FollowMenu from './FollowMenu.vue'
 import FollowInput from './FollowInput.vue'
@@ -506,8 +506,28 @@ const resolveByMaxNumber = (noSave = false) => {
     versionOffset.value = 0
   }
 }
+const resolveBySmallSideSpace = (noSave = false) => {
+  resolveSmallSideSpace(puz, answerMap.data).forEach(a => {
+    answerMap.data[a.y][a.x] = a.value
+  })
+  if (!noSave) {
+    const res = addToStorage(answerMap.data, versionOffset.value)
+    versionCount.value = res.length
+    versionOffset.value = 0
+  }
+}
 const resolveByLonelyNumber = (noSave = false) => {
   resolveLonelyNumber(puz, answerMap.data).forEach(a => {
+    answerMap.data[a.y][a.x] = a.value
+  })
+  if (!noSave) {
+    const res = addToStorage(answerMap.data, versionOffset.value)
+    versionCount.value = res.length
+    versionOffset.value = 0
+  }
+}
+const resolveBySplitMarkedPieces = (noSave = false) => {
+  resolveSplitMarkedPieces(puz, answerMap.data).forEach(a => {
     answerMap.data[a.y][a.x] = a.value
   })
   if (!noSave) {
@@ -686,7 +706,9 @@ const standardResolve = () => {
   resolveByBlock(true)
   resolveByEdge(true)
   resolveByMaxNumber(true)
+  resolveBySmallSideSpace(true)
   resolveByLonelyNumber(true)
+  resolveBySplitMarkedPieces(true)
   resolveByMarkedOrCrossed(true)
   const res = addToStorage(answerMap.data, versionOffset.value)
   versionCount.value = res.length
@@ -848,7 +870,9 @@ const handleDragEnd = (e) => {
       <button v-show="debug" @click="resolveByBlock">Resolve By Blocks</button>
       <button v-show="debug" @click="resolveByEdge">Resolve By Edge</button>
       <button v-show="debug" @click="resolveByMaxNumber">Resolve By Max Number</button>
+      <button v-show="debug" @click="resolveBySmallSideSpace">Resolve By Small Side Space</button>
       <button v-show="debug" @click="resolveByLonelyNumber">Resolve By Lonely Number</button>
+      <button v-show="debug" @click="resolveBySplitMarkedPieces">Resolve By Split Marked Pieces</button>
       <button v-show="debug" @click="resolveByMarkedOrCrossed">Resolve By Marked/Crossed</button>
       <button v-show="debug" @click="resolveByMn">m**n Resolve({{ estTime }})</button>
     </p>

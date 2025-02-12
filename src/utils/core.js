@@ -433,6 +433,240 @@ export const resolveMaxNumber = (puz, answer) => {
   return result
 }
 
+export const resolveSplitMarkedPieces = (puz, answer) => {
+  // 方法根据单个未知格子分隔开的两块marked，尝试判断是否是一个合法的连续完整块。如果连起来的长度超过最大数字，则为非法。该未知格子必定是cross
+  const result = [
+    // {
+    //   x: 0,
+    //   y: 0,
+    //   value: '1|0'
+    // }
+  ]
+  puz.left.forEach((row, index) => {
+    // line is like [4, 1, 2]
+    if (!isLineClear('row', answer, index)) {
+      const maxNumber = Math.max(...row)
+      const lineInfo = getLineInfo('row', answer, index)
+      if (lineInfo.markedPieces && lineInfo.markedPieces.length > 1) {
+        for (let i = 0; i < lineInfo.markedPieces.length - 1; i++) {
+          const markedPiece = lineInfo.markedPieces[i]
+          const nextMarkedPiece = lineInfo.markedPieces[i + 1]
+          if (!markedPiece.resolved && !nextMarkedPiece.resolved && (nextMarkedPiece.fromIndex - markedPiece.toIndex) === 2 && (nextMarkedPiece.toIndex - markedPiece.fromIndex + 1) > maxNumber) {
+            result.push({
+              x: markedPiece.toIndex + 1,
+              y: index,
+              value: '0'
+            })
+          }
+        }
+      }
+    }
+  })
+  puz.top.forEach((col, index) => {
+    if (!isLineClear('column', answer, index)) {
+      const maxNumber = Math.max(...col)
+      const lineInfo = getLineInfo('column', answer, index)
+      if (lineInfo.markedPieces && lineInfo.markedPieces.length > 1) {
+        for (let i = 0; i < lineInfo.markedPieces.length - 1; i++) {
+          const markedPiece = lineInfo.markedPieces[i]
+          const nextMarkedPiece = lineInfo.markedPieces[i + 1]
+          if (!markedPiece.resolved && !nextMarkedPiece.resolved && (nextMarkedPiece.fromIndex - markedPiece.toIndex) === 2 && (nextMarkedPiece.toIndex - markedPiece.fromIndex + 1) > maxNumber) {
+            result.push({
+              x: index,
+              y: markedPiece.toIndex + 1,
+              value: '0'
+            })
+          }
+        }
+      }
+    }
+  })
+  return result
+}
+
+export const resolveSmallSideSpace = (puz, answer) => {
+  // 方法根据边缘形成的空间大小，同边缘的数字比对，如果数字超过边缘空间大小，则此空间中的全部未知格子都应该是cross
+  const width = puz.top.length
+  const height = puz.left.length
+  const result = [
+    // {
+    //   x: 0,
+    //   y: 0,
+    //   value: '1|0'
+    // }
+  ]
+  puz.left.forEach((row, index) => {
+    // line is like [4, 1, 2]
+    if (row.length > 1 && !isLineClear('row', answer, index)) {
+      const preSideNumber = row[0]
+      const sufSideNumber = row[row.length - 1]
+      if (preSideNumber > 1) {
+        let preSideSpace = width
+        let firstUnknownIndex = -1
+        let combinedUnknowns = 0
+        for (let i = 0; i < width; i++) {
+          if (answer[index][i] === '') {
+            // 碰到未知格子，累计space
+            combinedUnknowns === 0 && (firstUnknownIndex = i)
+            combinedUnknowns++
+          } else if (answer[index][i] === '0') {
+            if (combinedUnknowns > 0) {
+              // 碰到了cross格子，并且之前已经在累计未知个数了，则说明第一个space已经明确了
+              preSideSpace = combinedUnknowns
+              combinedUnknowns = 0
+              break
+            } else {
+              // 碰到了cross格子，但是没有累计未知个数，继续往下一个看
+              continue
+            }
+          } else {
+            // 碰到marked格子了，属于异常状态，放弃
+            combinedUnknowns = 0
+            break
+          }
+        }
+        if (combinedUnknowns > 0) {
+          preSideSpace = combinedUnknowns
+          combinedUnknowns = 0
+        }
+        if (preSideNumber > preSideSpace) {
+          for (let i = firstUnknownIndex; i < firstUnknownIndex + preSideSpace; i++) {
+            result.push({
+              x: i,
+              y: index,
+              value: '0'
+            })
+          }
+        }
+      }
+      if (sufSideNumber > 1) {
+        let sufSideSpace = width
+        let firstUnknownIndex = -1
+        let combinedUnknowns = 0
+        for (let i = width - 1; i >= 0; i--) {
+          if (answer[index][i] === '') {
+            // 碰到未知格子，累计space
+            combinedUnknowns === 0 && (firstUnknownIndex = i)
+            combinedUnknowns++
+          } else if (answer[index][i] === '0') {
+            if (combinedUnknowns > 0) {
+              // 碰到了cross格子，并且之前已经在累计未知个数了，则说明第一个space已经明确了
+              sufSideSpace = combinedUnknowns
+              combinedUnknowns = 0
+              break
+            } else {
+              // 碰到了cross格子，但是没有累计未知个数，继续往下一个看
+              continue
+            }
+          } else {
+            // 碰到marked格子了，属于异常状态，放弃
+            combinedUnknowns = 0
+            break
+          }
+        }
+        if (combinedUnknowns > 0) {
+          sufSideSpace = combinedUnknowns
+          combinedUnknowns = 0
+        }
+        if (sufSideNumber > sufSideSpace) {
+          for (let i = firstUnknownIndex; i > firstUnknownIndex - sufSideSpace; i--) {
+            result.push({
+              x: i,
+              y: index,
+              value: '0'
+            })
+          }
+        }
+      }
+    }
+  })
+  puz.top.forEach((col, index) => {
+    if (col.length > 1 && !isLineClear('column', answer, index)) {
+      const preSideNumber = col[0]
+      const sufSideNumber = col[col.length - 1]
+      if (preSideNumber > 1) {
+        let preSideSpace = height
+        let firstUnknownIndex = -1
+        let combinedUnknowns = 0
+        for (let i = 0; i < height; i++) {
+          if (answer[i][index] === '') {
+            // 碰到未知格子，累计space
+            combinedUnknowns === 0 && (firstUnknownIndex = i)
+            combinedUnknowns++
+          } else if (answer[i][index] === '0') {
+            if (combinedUnknowns > 0) {
+              // 碰到了cross格子，并且之前已经在累计未知个数了，则说明第一个space已经明确了
+              preSideSpace = combinedUnknowns
+              combinedUnknowns = 0
+              break
+            } else {
+              // 碰到了cross格子，但是没有累计未知个数，继续往下一个看
+              continue
+            }
+          } else {
+            // 碰到marked格子了，属于异常状态，放弃
+            combinedUnknowns = 0
+            break
+          }
+        }
+        if (combinedUnknowns > 0) {
+          preSideSpace = combinedUnknowns
+          combinedUnknowns = 0
+        }
+        if (preSideNumber > preSideSpace) {
+          for (let i = firstUnknownIndex; i < firstUnknownIndex + preSideSpace; i++) {
+            result.push({
+              x: index,
+              y: i,
+              value: '0'
+            })
+          }
+        }
+      }
+      if (sufSideNumber > 1) {
+        let sufSideSpace = height
+        let firstUnknownIndex = -1
+        let combinedUnknowns = 0
+        for (let i = height - 1; i >= 0; i--) {
+          if (answer[i][index] === '') {
+            // 碰到未知格子，累计space
+            combinedUnknowns === 0 && (firstUnknownIndex = i)
+            combinedUnknowns++
+          } else if (answer[i][index] === '0') {
+            if (combinedUnknowns > 0) {
+              // 碰到了cross格子，并且之前已经在累计未知个数了，则说明第一个space已经明确了
+              sufSideSpace = combinedUnknowns
+              combinedUnknowns = 0
+              break
+            } else {
+              // 碰到了cross格子，但是没有累计未知个数，继续往下一个看
+              continue
+            }
+          } else {
+            // 碰到marked格子了，属于异常状态，放弃
+            combinedUnknowns = 0
+            break
+          }
+        }
+        if (combinedUnknowns > 0) {
+          sufSideSpace = combinedUnknowns
+          combinedUnknowns = 0
+        }
+        if (sufSideNumber > sufSideSpace) {
+          for (let i = firstUnknownIndex; i > firstUnknownIndex - sufSideSpace; i--) {
+            result.push({
+              x: index,
+              y: i,
+              value: '0'
+            })
+          }
+        }
+      }
+    }
+  })
+  return result
+}
+
 // NOTE 此策略已经被resolveMaxNumber涵盖了，已废弃
 export const resolveAllOne = (puz, answer) => {
   // 根据所有项都是1的行/列，将已明确的marked周围标cross
@@ -673,30 +907,167 @@ const getLineInfo = (direction, answer, index) => {
   let crossedCount = 0
   let unknownCount = 0
   let totalCount = 0
+  const markedPieces = []
+  let currentMarkedPieceFromIndex = -1
+  const spaces = []
+  let currentSpaceFromIndex = -1
   if (direction === 'row') {
     for (let i = 0; i < answer[index].length; i++) {
       totalCount++
       if (answer[index][i] === '1') {
         markedCount++
+        if (currentMarkedPieceFromIndex === -1) {
+          currentMarkedPieceFromIndex = i
+        }
       } else if (answer[index][i] === '0') {
         crossedCount++
+        if (currentMarkedPieceFromIndex > -1) {
+          const preSiblingIndex = currentMarkedPieceFromIndex - 1
+          const sufSiblingIndex = i
+          const resolved = Boolean((preSiblingIndex === -1 || answer[index][preSiblingIndex] === '0') && (sufSiblingIndex === answer[index].length || answer[index][sufSiblingIndex] === '0'))
+          markedPieces.push({
+            fromIndex: currentMarkedPieceFromIndex,
+            toIndex: i - 1,
+            length: i - 1 - currentMarkedPieceFromIndex + 1,
+            resolved
+          })
+          currentMarkedPieceFromIndex = -1
+        }
+        if (currentSpaceFromIndex > -1) {
+          spaces.push({
+            fromIndex: currentSpaceFromIndex,
+            toIndex: i - 1,
+            length: i - 1 - currentSpaceFromIndex + 1
+          })
+          currentSpaceFromIndex = -1
+        }
       } else {
         unknownCount++
+        if (currentMarkedPieceFromIndex > -1) {
+          const preSiblingIndex = currentMarkedPieceFromIndex - 1
+          const sufSiblingIndex = i
+          const resolved = Boolean((preSiblingIndex === -1 || answer[index][preSiblingIndex] === '0') && (sufSiblingIndex === answer[index].length || answer[index][sufSiblingIndex] === '0'))
+          markedPieces.push({
+            fromIndex: currentMarkedPieceFromIndex,
+            toIndex: i - 1,
+            length: i - 1 - currentMarkedPieceFromIndex + 1,
+            resolved
+          })
+          currentMarkedPieceFromIndex = -1
+        }
+        if (currentSpaceFromIndex === -1) {
+          currentSpaceFromIndex = i
+        }
       }
+    }
+    if (currentMarkedPieceFromIndex > -1) {
+      const preSiblingIndex = currentMarkedPieceFromIndex - 1
+      const sufSiblingIndex = answer[index].length
+      const resolved = Boolean((preSiblingIndex === -1 || answer[index][preSiblingIndex] === '0') && (sufSiblingIndex === answer[index].length || answer[index][sufSiblingIndex] === '0'))
+      markedPieces.push({
+        fromIndex: currentMarkedPieceFromIndex,
+        toIndex: answer[index].length - 1,
+        length: answer[index].length - 1 - currentMarkedPieceFromIndex + 1,
+        resolved
+      })
+      currentMarkedPieceFromIndex = -1
+    }
+    if (currentSpaceFromIndex > -1) {
+      spaces.push({
+        fromIndex: currentSpaceFromIndex,
+        toIndex: answer[index].length - 1,
+        length: answer[index].length - 1 - currentSpaceFromIndex + 1
+      })
+      currentSpaceFromIndex = -1
     }
   } else {
     for (let i = 0; i < answer.length; i++) {
       totalCount++
       if (answer[i][index] === '1') {
         markedCount++
+        if (currentMarkedPieceFromIndex === -1) {
+          currentMarkedPieceFromIndex = i
+        }
       } else if (answer[i][index] === '0') {
         crossedCount++
+        if (currentMarkedPieceFromIndex > -1) {
+          const preSiblingIndex = currentMarkedPieceFromIndex - 1
+          const sufSiblingIndex = i
+          const resolved = Boolean((preSiblingIndex === -1 || answer[preSiblingIndex][index] === '0') && (sufSiblingIndex === answer.length || answer[sufSiblingIndex][index] === '0'))
+          markedPieces.push({
+            fromIndex: currentMarkedPieceFromIndex,
+            toIndex: i - 1,
+            length: i - 1 - currentMarkedPieceFromIndex + 1,
+            resolved
+          })
+          currentMarkedPieceFromIndex = -1
+        }
+        if (currentSpaceFromIndex > -1) {
+          spaces.push({
+            fromIndex: currentSpaceFromIndex,
+            toIndex: i - 1,
+            length: i - 1 - currentSpaceFromIndex + 1
+          })
+          currentSpaceFromIndex = -1
+        }
       } else {
         unknownCount++
+        if (currentMarkedPieceFromIndex > -1) {
+          const preSiblingIndex = currentMarkedPieceFromIndex - 1
+          const sufSiblingIndex = i
+          const resolved = Boolean((preSiblingIndex === -1 || answer[preSiblingIndex][index] === '0') && (sufSiblingIndex === answer.length || answer[sufSiblingIndex][index] === '0'))
+          markedPieces.push({
+            fromIndex: currentMarkedPieceFromIndex,
+            toIndex: i - 1,
+            length: i - 1 - currentMarkedPieceFromIndex + 1,
+            resolved
+          })
+          currentMarkedPieceFromIndex = -1
+        }
+        if (currentSpaceFromIndex === -1) {
+          currentSpaceFromIndex = i
+        }
       }
+    }
+    if (currentMarkedPieceFromIndex > -1) {
+      const preSiblingIndex = currentMarkedPieceFromIndex - 1
+      const sufSiblingIndex = answer.length
+      const resolved = Boolean((preSiblingIndex === -1 || answer[preSiblingIndex][index] === '0') && (sufSiblingIndex === answer.length || answer[sufSiblingIndex][index] === '0'))
+      markedPieces.push({
+        fromIndex: currentMarkedPieceFromIndex,
+        toIndex: answer.length - 1,
+        length: answer.length - 1 - currentMarkedPieceFromIndex + 1,
+        resolved
+      })
+      currentMarkedPieceFromIndex = -1
+    }
+    if (currentSpaceFromIndex > -1) {
+      spaces.push({
+        fromIndex: currentSpaceFromIndex,
+        toIndex: answer.length - 1,
+        length: answer.length - 1 - currentSpaceFromIndex + 1
+      })
+      currentSpaceFromIndex = -1
     }
   }
   return {
+    spaces,
+    // [
+    //   {
+    //     fromIndex: 0,
+    //     toIndex: 2,
+    //     length: 3
+    //   }
+    // ]
+    markedPieces,
+    // [
+    //   {
+    //     fromIndex: 0,
+    //     toIndex: 2,
+    //     length: 3,
+    //     resolved: false // 前后为边界或者cross的认定为已解决明确
+    //   }
+    // ]
     markedCount,
     crossedCount,
     unknownCount,
