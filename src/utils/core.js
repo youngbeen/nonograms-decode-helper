@@ -176,8 +176,8 @@ const checkRowValid = (pa, rule) => {
   return toCheck.join(',') === rule.join(',')
 }
 
+// 方法会剔除所有左右两边连续的明确的cell，根据必定重叠的区间进行marked填充
 export const resolveBlock = (puz, answer) => {
-  // 方法会剔除所有左右两边连续的明确的cell，根据必定重叠的区间进行marked填充
   const width = puz.top.length
   const height = puz.left.length
   const result = [
@@ -240,8 +240,8 @@ export const resolveBlock = (puz, answer) => {
   return result
 }
 
+// 方法根据左右边缘的大数字，结合在靠边缘位置已经marked的情况，计算必定应该marked的部分
 export const resolveEdge = (puz, answer) => {
-  // 方法根据左右边缘的大数字，结合在靠边缘位置已经marked的情况，计算必定应该marked的部分
   const width = puz.top.length
   const height = puz.left.length
   const result = [
@@ -352,8 +352,8 @@ export const resolveEdge = (puz, answer) => {
   return result
 }
 
+// 方法根据最大的数字不管有几个，只要已经出现了连续最大数字个marked格子，则两边必定为cross
 export const resolveMaxNumber = (puz, answer) => {
-  // 方法根据最大的数字不管有几个，只要已经出现了连续最大数字个marked格子，则两边必定为cross
   const width = puz.top.length
   const height = puz.left.length
   const result = [
@@ -433,8 +433,134 @@ export const resolveMaxNumber = (puz, answer) => {
   return result
 }
 
+// 方法根据左右两侧最近的一侧边界（是cross或者左右边界）的marked块，根据当前未解决的数字升序情况，判断属于哪一挡位并进行必定mark标记
+export const resolveSideExactMarkedPiece = (puz, answer) => {
+  const result = [
+    // {
+    //   x: 0,
+    //   y: 0,
+    //   value: '1|0'
+    // }
+  ]
+  puz.left.forEach((row, index) => {
+    if (!isLineClear('row', answer, index)) {
+      const { numberInfo } = getPuzLineInfo(row)
+      const ascNumbers = numberInfo.map(n => n.number)
+      const lineInfo = getLineInfo('row', answer, index)
+      const unresolvedMarkedPieces = lineInfo.markedPieces.filter(m => !m.resolved)
+      unresolvedMarkedPieces.forEach(p => {
+        const preBorder = getLineNearBorder('row', answer, index, p.fromIndex, {
+          checkDirection: 'desc'
+        })
+        const sufBorder = getLineNearBorder('row', answer, index, p.toIndex, {
+          checkDirection: 'asc'
+        })
+        // 查找计算当前块至少包含几个
+        let shouldBeNumber = p.length
+        for (let i = 0; i < ascNumbers.length - 1; i++) {
+          const n = ascNumbers[i]
+          const nextNumber = ascNumbers[i + 1]
+          if (p.length > n && p.length < nextNumber) {
+            shouldBeNumber = nextNumber
+          }
+        }
+        if (shouldBeNumber < ascNumbers[0]) {
+          // 不会比最小数字还小
+          shouldBeNumber = ascNumbers[0]
+        }
+        // 查找最近的边界
+        const preDistance = p.fromIndex - preBorder.borderIndex - 1
+        const sufDistance = sufBorder.borderIndex - p.toIndex - 1
+        if (preDistance < sufDistance) {
+          const shouldMarkCount = shouldBeNumber - p.length - preDistance
+          if (shouldMarkCount > 0) {
+            // 进行标记
+            for (let i = 1; i <= shouldMarkCount; i++) {
+              result.push({
+                x: p.toIndex + i,
+                y: index,
+                value: '1'
+              })
+            }
+          }
+        } else {
+          const shouldMarkCount = shouldBeNumber - p.length - sufDistance
+          if (shouldMarkCount > 0) {
+            // 进行标记
+            for (let i = 1; i <= shouldMarkCount; i++) {
+              result.push({
+                x: p.fromIndex - i,
+                y: index,
+                value: '1'
+              })
+            }
+          }
+        }
+      })
+    }
+  })
+  puz.top.forEach((col, index) => {
+    if (!isLineClear('col', answer, index)) {
+      const { numberInfo } = getPuzLineInfo(col)
+      const ascNumbers = numberInfo.map(n => n.number)
+      const lineInfo = getLineInfo('col', answer, index)
+      const unresolvedMarkedPieces = lineInfo.markedPieces.filter(m => !m.resolved)
+      unresolvedMarkedPieces.forEach(p => {
+        const preBorder = getLineNearBorder('col', answer, index, p.fromIndex, {
+          checkDirection: 'desc'
+        })
+        const sufBorder = getLineNearBorder('col', answer, index, p.toIndex, {
+          checkDirection: 'asc'
+        })
+        // 查找计算当前块至少包含几个
+        let shouldBeNumber = p.length
+        for (let i = 0; i < ascNumbers.length - 1; i++) {
+          const n = ascNumbers[i]
+          const nextNumber = ascNumbers[i + 1]
+          if (p.length > n && p.length < nextNumber) {
+            shouldBeNumber = nextNumber
+          }
+        }
+        if (shouldBeNumber < ascNumbers[0]) {
+          // 不会比最小数字还小
+          shouldBeNumber = ascNumbers[0]
+        }
+        // 查找最近的边界
+        const preDistance = p.fromIndex - preBorder.borderIndex - 1
+        const sufDistance = sufBorder.borderIndex - p.toIndex - 1
+        if (preDistance < sufDistance) {
+          const shouldMarkCount = shouldBeNumber - p.length - preDistance
+          if (shouldMarkCount > 0) {
+            // 进行标记
+            for (let i = 1; i <= shouldMarkCount; i++) {
+              result.push({
+                x: index,
+                y: p.toIndex + i,
+                value: '1'
+              })
+            }
+          }
+        } else {
+          const shouldMarkCount = shouldBeNumber - p.length - sufDistance
+          if (shouldMarkCount > 0) {
+            // 进行标记
+            for (let i = 1; i <= shouldMarkCount; i++) {
+              result.push({
+                x: index,
+                y: p.fromIndex - i,
+                value: '1'
+              })
+            }
+          }
+        }
+      })
+    }
+  })
+  return result
+}
+
+// 方法根据单个未知格子分隔开的两块marked，尝试判断是否是一个合法的连续完整块。如果连起来的长度超过最大数字，则为非法。该未知格子必定是cross
 export const resolveSplitMarkedPieces = (puz, answer) => {
-  // 方法根据单个未知格子分隔开的两块marked，尝试判断是否是一个合法的连续完整块。如果连起来的长度超过最大数字，则为非法。该未知格子必定是cross
   const result = [
     // {
     //   x: 0,
@@ -484,8 +610,8 @@ export const resolveSplitMarkedPieces = (puz, answer) => {
   return result
 }
 
+// 方法根据边缘形成的空间大小，同边缘的数字比对，如果数字超过边缘空间大小，则此空间中的全部未知格子都应该是cross
 export const resolveSmallSideSpace = (puz, answer) => {
-  // 方法根据边缘形成的空间大小，同边缘的数字比对，如果数字超过边缘空间大小，则此空间中的全部未知格子都应该是cross
   const width = puz.top.length
   const height = puz.left.length
   const result = [
@@ -728,8 +854,8 @@ export const resolveAllOne = (puz, answer) => {
   return result
 }
 
+// 只有一个数字，将所有之间的未知项连起来，最后处理左右余数之外的全部标cross
 export const resolveLonelyNumber = (puz, answer) => {
-  // 只有一个数字，将所有之间的未知项连起来，最后处理左右余数之外的全部标cross
   const width = puz.top.length
   const height = puz.left.length
   const result = [
@@ -810,8 +936,9 @@ export const resolveLonelyNumber = (puz, answer) => {
   return result
 }
 
+// TODO 下面的方法后续将废弃或改写，整合到新的根据space和marked piece进行对比方法中
+// 方法根据行列内已经明确了所有的marked，或者所有待明确的全部应该是marked的情况，进行剩余的填充
 export const resolveMarkedOrCrossed = (puz, answer) => {
-  // 方法根据行列内已经明确了所有的marked，或者所有待明确的全部应该是marked的情况，进行剩余的填充
   const result = [
     // {
     //   x: 0,
@@ -886,6 +1013,39 @@ export const resolveMarkedOrCrossed = (puz, answer) => {
   return result
 }
 
+// 获取谜题行的信息，包含所有出现的数字升序、所有出现的数字降序，各个数字出现的次数等
+const getPuzLineInfo = (puzLine, answerLine) => {
+  const ascLine = [...puzLine].sort()
+  let number = undefined
+  let count = 0
+  const numberInfo = []
+  for (let i = 0; i < ascLine.length; i++) {
+    const n = ascLine[i]
+    if (n !== number) {
+      if (number !== undefined) {
+        numberInfo.push({
+          number,
+          count
+        })
+      }
+      number = n
+      count = 1
+    } else {
+      count++
+    }
+  }
+  if (number !== undefined) {
+    numberInfo.push({
+      number,
+      count
+    })
+  }
+  return {
+    numberInfo,
+    ascLine
+  }
+}
+
 const isLineClear = (direction, answer, index) => {
   if (direction === 'row') {
     return answer[index].every(val => val)
@@ -902,6 +1062,7 @@ const isLineClear = (direction, answer, index) => {
   }
 }
 
+// 获取行/列信息，包含其中的所有空间spaces，标记的块markedPieces，以及已标记数量、未知数量、总数据等等
 const getLineInfo = (direction, answer, index) => {
   let markedCount = 0
   let crossedCount = 0
@@ -1072,6 +1233,128 @@ const getLineInfo = (direction, answer, index) => {
     crossedCount,
     unknownCount,
     totalCount
+  }
+}
+
+// 获取指定行/列中下一个边界信息（cross或者左右边界）
+const getLineNearBorder = (direction, answer, index, startIndex, option) => {
+  const checkDirection = option?.checkDirection || 'asc'
+  let borderIndex = null
+  let borderType = null
+  if (direction === 'row') {
+    const row = answer[index]
+    if (checkDirection === 'desc') {
+      for (let i = startIndex - 1; i >= 0; i--) {
+        const cell = row[i]
+        if (cell === '0') {
+          borderIndex = i
+          borderType = cell
+          break
+        }
+      }
+      if (!borderIndex) {
+        borderIndex = -1
+        borderType = 'edge'
+      }
+    } else {
+      for (let i = startIndex + 1; i < row.length; i++) {
+        const cell = row[i]
+        if (cell === '0') {
+          borderIndex = i
+          borderType = cell
+          break
+        }
+      }
+      if (!borderIndex) {
+        borderIndex = row.length
+        borderType = 'edge'
+      }
+    }
+  } else {
+    if (checkDirection === 'desc') {
+      for (let i = startIndex - 1; i >= 0; i--) {
+        const cell = answer[i][index]
+        if (cell) {
+          borderIndex = i
+          borderType = cell
+          break
+        }
+      }
+      if (!borderIndex) {
+        borderIndex = -1
+        borderType = 'edge'
+      }
+    } else {
+      for (let i = startIndex + 1; i < answer.length; i++) {
+        const cell = answer[i][index]
+        if (cell) {
+          borderIndex = i
+          borderType = cell
+          break
+        }
+      }
+      if (!borderIndex) {
+        borderIndex = answer.length
+        borderType = 'edge'
+      }
+    }
+  }
+  return {
+    borderIndex,
+    borderType
+  }
+}
+
+// 获取指定行/列中下一个明确的格子信息
+const getLineNextExactCell = (direction, answer, index, startIndex, option) => {
+  const checkDirection = option?.checkDirection || 'asc'
+  let exactCellIndex = null
+  let exactCell = null
+  if (direction === 'row') {
+    const row = answer[index]
+    if (checkDirection === 'desc') {
+      for (let i = startIndex - 1; i >= 0; i--) {
+        const cell = row[i]
+        if (cell) {
+          exactCellIndex = i
+          exactCell = cell
+          break
+        }
+      }
+    } else {
+      for (let i = startIndex + 1; i < row.length; i++) {
+        const cell = row[i]
+        if (cell) {
+          exactCellIndex = i
+          exactCell = cell
+          break
+        }
+      }
+    }
+  } else {
+    if (checkDirection === 'desc') {
+      for (let i = startIndex - 1; i >= 0; i--) {
+        const cell = answer[i][index]
+        if (cell) {
+          exactCellIndex = i
+          exactCell = cell
+          break
+        }
+      }
+    } else {
+      for (let i = startIndex + 1; i < answer.length; i++) {
+        const cell = answer[i][index]
+        if (cell) {
+          exactCellIndex = i
+          exactCell = cell
+          break
+        }
+      }
+    }
+  }
+  return {
+    exactCellIndex,
+    exactCell
   }
 }
 
