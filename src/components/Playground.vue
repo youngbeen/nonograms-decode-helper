@@ -716,7 +716,7 @@ const standardResolve = () => {
   resolveByBlock(true)
   resolveByEdge(true)
   resolveByMaxNumber(true)
-  // resolveBySideExactMarkedPiece(true)
+  resolveBySideExactMarkedPiece(true)
   resolveBySplitMarkedPieces(true)
   resolveBySmallSideSpace(true)
   resolveByLonelyNumber(true)
