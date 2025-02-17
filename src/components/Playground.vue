@@ -4,7 +4,7 @@ import { useRoute } from 'vue-router'
 import { clipboard } from '@youngbeen/angle-ctrl'
 import eventBus from '@/EventBus'
 import demoData from '@/demo/demoData'
-import { initMap, resolveBlock, resolveEdge, resolveMaxNumber, resolveSideExactMarkedPiece, resolveSmallSideSpace, resolveLonelyNumber, resolveSplitMarkedPieces, resolveMarkedOrCrossed, mnQuantaResolve, getLineSum } from '@/utils/core'
+import { initMap, resolveBlock, resolveEdge, resolveMaxNumber, resolveSideExactMarkedPiece, resolveSmallSideSpace, resolveLonelyNumber, resolveSplitMarkedPieces, resolveMarkedOrCrossed, mnQuantaResolve, checkAnswerSheet, getLineSum } from '@/utils/core'
 import { addToStorage, clearStorage, getStorageByOffset, saveCopy, getSavedCopy, savePreset, getPreset } from '@/utils/storage'
 import FollowMenu from './FollowMenu.vue'
 import FollowInput from './FollowInput.vue'
@@ -721,6 +721,7 @@ const standardResolve = () => {
   resolveBySmallSideSpace(true)
   resolveByLonelyNumber(true)
   resolveByMarkedOrCrossed(true)
+  checkAnswerSheet(puz, answerMap.data)
   const res = addToStorage(answerMap.data, versionOffset.value)
   versionCount.value = res.length
   versionOffset.value = 0
@@ -877,7 +878,7 @@ const handleDragEnd = (e) => {
       <button @click="loadDemo('hard')">Load Hard Demo</button>
     </p>
     <p class="action-seg" v-show="status === 'resolving'">
-      <button v-show="debug" @click="standardResolve">Resolve(R / blank space)</button>
+      <button @click="standardResolve">Resolve(R / blank space)</button>
       <button v-show="debug" @click="resolveByBlock">Resolve By Blocks</button>
       <button v-show="debug" @click="resolveByEdge">Resolve By Edge</button>
       <button v-show="debug" @click="resolveByMaxNumber">Resolve By Max Number</button>
@@ -886,7 +887,7 @@ const handleDragEnd = (e) => {
       <button v-show="debug" @click="resolveBySmallSideSpace">Resolve By Small Side Space</button>
       <button v-show="debug" @click="resolveByLonelyNumber">Resolve By Lonely Number</button>
       <button v-show="debug" @click="resolveByMarkedOrCrossed">Resolve By Marked/Crossed</button>
-      <button v-show="debug" @click="resolveByMn">m**n Resolve({{ estTime }})</button>
+      <button @click="resolveByMn">m**n Resolve({{ estTime }})</button>
     </p>
     <p class="action-seg" v-show="status === 'resolving'">
       <button v-show="versionOffset > -1 * (versionCount - 1)"

@@ -187,56 +187,35 @@ export const resolveBlock = (puz, answer) => {
     //   value: '1|0'
     // }
   ]
-  puz.top.forEach((col, index) => {
-    if (!isLineClear('column', answer, index)) {
-      // col is like [5, 4]
-      const { preExactCount, preMarkedInfo, sufExactCount, sufMarkedInfo } = getLineSideExactInfo('column', answer, index)
-      const fixedCol = col.slice(preMarkedInfo.length, col.length - sufMarkedInfo.length)
-      const sums = sum(fixedCol)
-      if (sums > 0) {
-        const gapCount = fixedCol.length - 1
-        const notSureCount = height - sums - gapCount - preExactCount - sufExactCount // eg. 2
-        let baseLength = preExactCount
-        fixedCol.forEach(c => {
-          if (c > notSureCount) {
-            for (let j = 0; j < c - notSureCount; j++) {
-              result.push({
-                x: index,
-                y: baseLength + j + notSureCount,
-                value: '1'
-              })
+  const processLine = (direction, lines, answer, length) => {
+    lines.forEach((line, index) => {
+      if (!isLineClear(direction, answer, index)) {
+        // line is like [5, 4]
+        const { preExactCount, preMarkedInfo, sufExactCount, sufMarkedInfo } = getLineSideExactInfo(direction, answer, index)
+        const fixedLine = line.slice(preMarkedInfo.length, line.length - sufMarkedInfo.length)
+        const sums = sum(fixedLine)
+        if (sums > 0) {
+          const gapCount = fixedLine.length - 1
+          const notSureCount = length - sums - gapCount - preExactCount - sufExactCount // eg. 2
+          let baseLength = preExactCount
+          fixedLine.forEach(l => {
+            if (l > notSureCount) {
+              for (let j = 0; j < l - notSureCount; j++) {
+                result.push({
+                  x: direction === 'row' ? baseLength + j + notSureCount : index,
+                  y: direction === 'row' ? index : baseLength + j + notSureCount,
+                  value: '1'
+                })
+              }
             }
-          }
-          baseLength += c + 1
-        })
+            baseLength += l + 1
+          })
+        }
       }
-    }
-  })
-  puz.left.forEach((row, index) => {
-    if (!isLineClear('row', answer, index)) {
-      // row is like [5, 4]
-      const { preExactCount, preMarkedInfo, sufExactCount, sufMarkedInfo } = getLineSideExactInfo('row', answer, index)
-      const fixedRow = row.slice(preMarkedInfo.length, row.length - sufMarkedInfo.length)
-      const sums = sum(fixedRow)
-      if (sums > 0) {
-        const gapCount = fixedRow.length - 1
-        const notSureCount = width - sums - gapCount - preExactCount - sufExactCount // eg. 2
-        let baseLength = preExactCount
-        fixedRow.forEach(r => {
-          if (r > notSureCount) {
-            for (let j = 0; j < r - notSureCount; j++) {
-              result.push({
-                x: baseLength + j + notSureCount,
-                y: index,
-                value: '1'
-              })
-            }
-          }
-          baseLength += r + 1
-        })
-      }
-    }
-  })
+    })
+  }
+  processLine('row', puz.left, answer, width)
+  processLine('column', puz.top, answer, height)
   return result
 }
 
@@ -442,120 +421,67 @@ export const resolveSideExactMarkedPiece = (puz, answer) => {
     //   value: '1|0'
     // }
   ]
-  puz.left.forEach((row, index) => {
-    if (!isLineClear('row', answer, index)) {
-      const { numberInfo } = getPuzLineInfo(row)
-      const ascNumbers = numberInfo.map(n => n.number)
-      const lineInfo = getLineInfo('row', answer, index)
-      const unresolvedMarkedPieces = lineInfo.markedPieces.filter(m => !m.resolved)
-      unresolvedMarkedPieces.forEach(p => {
-        const preBorder = getLineNearBorder('row', answer, index, p.fromIndex, {
-          checkDirection: 'desc'
-        })
-        const sufBorder = getLineNearBorder('row', answer, index, p.toIndex, {
-          checkDirection: 'asc'
-        })
-        // 查找计算当前块至少包含几个
-        let shouldBeNumber = p.length
-        for (let i = 0; i < ascNumbers.length - 1; i++) {
-          const n = ascNumbers[i]
-          const nextNumber = ascNumbers[i + 1]
-          if (p.length > n && p.length < nextNumber) {
-            shouldBeNumber = nextNumber
-          }
-        }
-        if (shouldBeNumber < ascNumbers[0]) {
-          // 不会比最小数字还小
-          shouldBeNumber = ascNumbers[0]
-        }
-        // 查找最近的边界
-        const preDistance = p.fromIndex - preBorder.borderIndex - 1
-        const sufDistance = sufBorder.borderIndex - p.toIndex - 1
-        if (preDistance < sufDistance) {
-          const shouldMarkCount = shouldBeNumber - p.length - preDistance
-          if (shouldMarkCount > 0) {
-            // 进行标记
-            for (let i = 1; i <= shouldMarkCount; i++) {
-              result.push({
-                x: p.toIndex + i,
-                y: index,
-                value: '1'
-              })
+  const processLine = (direction, lines, answer) => {
+    lines.forEach((line, index) => {
+      if (!isLineClear(direction, answer, index)) {
+        const { numberInfo } = getPuzLineInfo(line)
+        const ascNumbers = numberInfo.map(n => n.number)
+        const lineInfo = getLineInfo(direction, answer, index)
+        const unresolvedMarkedPieces = lineInfo.markedPieces.filter(m => !m.resolved)
+        unresolvedMarkedPieces.forEach(p => {
+          const preBorder = getLineNearBorder(direction, answer, index, p.fromIndex, {
+            checkDirection: 'desc'
+          })
+          const sufBorder = getLineNearBorder(direction, answer, index, p.toIndex, {
+            checkDirection: 'asc'
+          })
+          // 查找计算当前块至少包含几个
+          let shouldBeNumber = p.length
+          for (let i = 0; i < ascNumbers.length - 1; i++) {
+            const n = ascNumbers[i]
+            const nextNumber = ascNumbers[i + 1]
+            if (p.length > n && p.length < nextNumber) {
+              shouldBeNumber = nextNumber
             }
           }
-        } else {
-          const shouldMarkCount = shouldBeNumber - p.length - sufDistance
-          if (shouldMarkCount > 0) {
-            // 进行标记
-            for (let i = 1; i <= shouldMarkCount; i++) {
-              result.push({
-                x: p.fromIndex - i,
-                y: index,
-                value: '1'
-              })
+          if (shouldBeNumber < ascNumbers[0]) {
+            // 不会比最小数字还小
+            shouldBeNumber = ascNumbers[0]
+          }
+          // 查找最近的边界
+          const preDistance = p.fromIndex - preBorder.borderIndex - 1
+          const sufDistance = sufBorder.borderIndex - p.toIndex - 1
+          if (preDistance < sufDistance) {
+            const shouldMarkCount = shouldBeNumber - p.length - preDistance
+            if (shouldMarkCount > 0) {
+              // 进行标记
+              for (let i = 1; i <= shouldMarkCount; i++) {
+                result.push({
+                  x: direction === 'row' ? p.toIndex + i : index,
+                  y: direction === 'row' ? index : p.toIndex + i,
+                  value: '1'
+                })
+              }
+            }
+          } else {
+            const shouldMarkCount = shouldBeNumber - p.length - sufDistance
+            if (shouldMarkCount > 0) {
+              // 进行标记
+              for (let i = 1; i <= shouldMarkCount; i++) {
+                result.push({
+                  x: direction === 'row' ? p.fromIndex - i : index,
+                  y: direction === 'row' ? index : p.fromIndex - i,
+                  value: '1'
+                })
+              }
             }
           }
-        }
-      })
-    }
-  })
-  puz.top.forEach((col, index) => {
-    if (!isLineClear('col', answer, index)) {
-      const { numberInfo } = getPuzLineInfo(col)
-      const ascNumbers = numberInfo.map(n => n.number)
-      const lineInfo = getLineInfo('col', answer, index)
-      const unresolvedMarkedPieces = lineInfo.markedPieces.filter(m => !m.resolved)
-      unresolvedMarkedPieces.forEach(p => {
-        const preBorder = getLineNearBorder('col', answer, index, p.fromIndex, {
-          checkDirection: 'desc'
         })
-        const sufBorder = getLineNearBorder('col', answer, index, p.toIndex, {
-          checkDirection: 'asc'
-        })
-        // 查找计算当前块至少包含几个
-        let shouldBeNumber = p.length
-        for (let i = 0; i < ascNumbers.length - 1; i++) {
-          const n = ascNumbers[i]
-          const nextNumber = ascNumbers[i + 1]
-          if (p.length > n && p.length < nextNumber) {
-            shouldBeNumber = nextNumber
-          }
-        }
-        if (shouldBeNumber < ascNumbers[0]) {
-          // 不会比最小数字还小
-          shouldBeNumber = ascNumbers[0]
-        }
-        // 查找最近的边界
-        const preDistance = p.fromIndex - preBorder.borderIndex - 1
-        const sufDistance = sufBorder.borderIndex - p.toIndex - 1
-        if (preDistance < sufDistance) {
-          const shouldMarkCount = shouldBeNumber - p.length - preDistance
-          if (shouldMarkCount > 0) {
-            // 进行标记
-            for (let i = 1; i <= shouldMarkCount; i++) {
-              result.push({
-                x: index,
-                y: p.toIndex + i,
-                value: '1'
-              })
-            }
-          }
-        } else {
-          const shouldMarkCount = shouldBeNumber - p.length - sufDistance
-          if (shouldMarkCount > 0) {
-            // 进行标记
-            for (let i = 1; i <= shouldMarkCount; i++) {
-              result.push({
-                x: index,
-                y: p.fromIndex - i,
-                value: '1'
-              })
-            }
-          }
-        }
-      })
-    }
-  })
+      }
+    })
+  }
+  processLine('row', puz.left, answer)
+  processLine('column', puz.top, answer)
   return result
 }
 
@@ -1015,7 +941,7 @@ export const resolveMarkedOrCrossed = (puz, answer) => {
 
 // 获取谜题行的信息，包含所有出现的数字升序、所有出现的数字降序，各个数字出现的次数等
 const getPuzLineInfo = (puzLine, answerLine) => {
-  const ascLine = [...puzLine].sort()
+  const ascLine = [...puzLine].sort((a, b) => a - b)
   let number = undefined
   let count = 0
   const numberInfo = []
@@ -1274,7 +1200,7 @@ const getLineNearBorder = (direction, answer, index, startIndex, option) => {
     if (checkDirection === 'desc') {
       for (let i = startIndex - 1; i >= 0; i--) {
         const cell = answer[i][index]
-        if (cell) {
+        if (cell === '0') {
           borderIndex = i
           borderType = cell
           break
@@ -1287,7 +1213,7 @@ const getLineNearBorder = (direction, answer, index, startIndex, option) => {
     } else {
       for (let i = startIndex + 1; i < answer.length; i++) {
         const cell = answer[i][index]
-        if (cell) {
+        if (cell === '0') {
           borderIndex = i
           borderType = cell
           break
@@ -1511,24 +1437,33 @@ const getLineSideCrossedCount = (direction, answer, index) => {
   }
 }
 
-const fillLine = (data, length) => {
-  const result = []
-  if (data.length === 1 && data[0] === 0) {
-    for (let j = 0; j < length; j++) {
-      result.push('0')
-    }
-    return result
+export const checkAnswerSheet = (puz, answer) => {
+  const checkLine = (direction, lines, answer) => {
+    lines.forEach((line, index) => {
+      if (isLineClear(direction, answer, index)) {
+        const lineInfo = getLineInfo(direction, answer, index)
+        if (line[0] !== 0) {
+          if (lineInfo.markedPieces.length !== line.length) {
+            console.error('错误行列', direction, '索引：', index, '错误原因：marked块数量不相等')
+          } else if (lineInfo.markedPieces.length === line.length) {
+            for (let j = 0; j < line.length; j++) {
+              const n = line[j]
+              if (n !== lineInfo.markedPieces[j].length) {
+                console.error('错误行列', direction, '索引：', index, `错误原因：索引${j}的数字标记不正确`)
+                break
+              }
+            }
+          }
+        } else {
+          if (lineInfo.markedPieces.length) {
+            console.error('错误行列', direction, '索引：', index, '错误原因：不应该出现任何marked格子')
+          }
+        }
+      }
+    })
   }
-  data.forEach((v, index) => {
-    if (index > 0) {
-      // the gap, fill with a '0'
-      result.push('0')
-    }
-    for (let j = 0; j < v; j++) {
-      result.push('1')
-    }
-  })
-  return result
+  checkLine('row', puz.left, answer)
+  checkLine('column', puz.top, answer)
 }
 
 export const initMap = (width, height) => {
