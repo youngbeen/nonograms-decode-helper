@@ -230,104 +230,68 @@ export const resolveEdge = (puz, answer) => {
     //   value: '1|0'
     // }
   ]
-  puz.left.forEach((row, index) => {
-    // line is like [4, 1, 2]
-    if (!isLineClear('row', answer, index)) {
-      const { preExactCount, preMarkedInfo, sufExactCount, sufMarkedInfo } = getLineSideExactInfo('row', answer, index)
-      const firstMarkedIndex = answer[index].findIndex((a, i) => i >= preExactCount && a === '1')
-      const lastMarkedIndex = answer[index].findLastIndex((a, i) => i < answer[index].length - sufExactCount && a === '1')
-      const fixedRow = row.slice(preMarkedInfo.length, row.length - sufMarkedInfo.length)
-      if (firstMarkedIndex > -1 && fixedRow.length) {
-        const exactHeadSureLength = preExactCount + fixedRow[0] - (firstMarkedIndex + 1)
-        for (let i = 1; i <= exactHeadSureLength; i++) {
-          // 判断首
-          result.push({
-            x: firstMarkedIndex + i,
-            y: index,
-            value: '1'
-          })
-        }
-        if (firstMarkedIndex === 0) {
-          result.push({
-            x: firstMarkedIndex + exactHeadSureLength + 1,
-            y: index,
-            value: '0'
-          })
-        }
-      }
-      if (lastMarkedIndex > -1 && fixedRow.length > 1) {
-        // 判断尾
-        const exactTailSureLength = sufExactCount + fixedRow[fixedRow.length - 1] - (width - lastMarkedIndex)
-        for (let i = 1; i <= exactTailSureLength; i++) {
-          result.push({
-            x: lastMarkedIndex - i,
-            y: index,
-            value: '1'
-          })
-        }
-        if (lastMarkedIndex === width - 1) {
-          result.push({
-            x: lastMarkedIndex - exactTailSureLength - 1,
-            y: index,
-            value: '0'
-          })
-        }
-      }
-    }
-  })
-  puz.top.forEach((col, index) => {
-    if (!isLineClear('column', answer, index)) {
-      const { preExactCount, preMarkedInfo, sufExactCount, sufMarkedInfo } = getLineSideExactInfo('column', answer, index)
-      let firstMarkedIndex = -1
-      let lastMarkedIndex = -1
-      for (let i = preExactCount; i < answer.length - sufExactCount; i++) {
-        const a = answer[i][index]
-        if (a === '1') {
-          if (firstMarkedIndex === -1) {
-            firstMarkedIndex = i
+  const processLine = (direction, lines, answer, length) => {
+    lines.forEach((line, index) => {
+      if (!isLineClear(direction, answer, index)) {
+        const { preExactCount, preMarkedInfo, sufExactCount, sufMarkedInfo } = getLineSideExactInfo(direction, answer, index)
+        let firstMarkedIndex = -1
+        let lastMarkedIndex = -1
+        if (direction === 'row') {
+          firstMarkedIndex = answer[index].findIndex((a, i) => i >= preExactCount && a === '1')
+          lastMarkedIndex = answer[index].findLastIndex((a, i) => i < answer[index].length - sufExactCount && a === '1')
+        } else {
+          for (let i = preExactCount; i < answer.length - sufExactCount; i++) {
+            const a = answer[i][index]
+            if (a === '1') {
+              if (firstMarkedIndex === -1) {
+                firstMarkedIndex = i
+              }
+              lastMarkedIndex = i
+            }
           }
-          lastMarkedIndex = i
+        }
+        const fixedLine = line.slice(preMarkedInfo.length, line.length - sufMarkedInfo.length)
+        if (firstMarkedIndex > -1 && fixedLine.length) {
+          const exactHeadSureLength = preExactCount + fixedLine[0] - (firstMarkedIndex + 1)
+          for (let i = 1; i <= exactHeadSureLength; i++) {
+            // 判断首
+            result.push({
+              x: direction === 'row' ? firstMarkedIndex + i : index,
+              y: direction === 'row' ? index : firstMarkedIndex + i,
+              value: '1'
+            })
+          }
+          if (firstMarkedIndex === 0) {
+            result.push({
+              x: direction === 'row' ? firstMarkedIndex + exactHeadSureLength + 1 : index,
+              y: direction === 'row' ? index : firstMarkedIndex + exactHeadSureLength + 1,
+              value: '0'
+            })
+          }
+        }
+        if (lastMarkedIndex > -1 && fixedLine.length > 1) {
+          // 判断尾
+          const exactTailSureLength = sufExactCount + fixedLine[fixedLine.length - 1] - (length - lastMarkedIndex)
+          for (let i = 1; i <= exactTailSureLength; i++) {
+            result.push({
+              x: direction === 'row' ? lastMarkedIndex - i : index,
+              y: direction === 'row' ? index : lastMarkedIndex - i,
+              value: '1'
+            })
+          }
+          if (lastMarkedIndex === length - 1) {
+            result.push({
+              x: direction === 'row' ? lastMarkedIndex - exactTailSureLength - 1 : index,
+              y: direction === 'row' ? index : lastMarkedIndex - exactTailSureLength - 1,
+              value: '0'
+            })
+          }
         }
       }
-      const fixedCol = col.slice(preMarkedInfo.length, col.length - sufMarkedInfo.length)
-      if (firstMarkedIndex > -1 && fixedCol.length) {
-        const exactHeadSureLength = preExactCount + fixedCol[0] - (firstMarkedIndex + 1)
-        for (let i = 1; i <= exactHeadSureLength; i++) {
-          // 判断首
-          result.push({
-            x: index,
-            y: firstMarkedIndex + i,
-            value: '1'
-          })
-        }
-        if (firstMarkedIndex === 0) {
-          result.push({
-            x: index,
-            y: firstMarkedIndex + exactHeadSureLength + 1,
-            value: '0'
-          })
-        }
-      }
-      if (lastMarkedIndex > -1 && fixedCol.length > 1) {
-        // 判断尾
-        const exactTailSureLength = sufExactCount + fixedCol[fixedCol.length - 1] - (height - lastMarkedIndex)
-        for (let i = 1; i <= exactTailSureLength; i++) {
-          result.push({
-            x: index,
-            y: lastMarkedIndex - i,
-            value: '1'
-          })
-        }
-        if (lastMarkedIndex === width - 1) {
-          result.push({
-            x: index,
-            y: lastMarkedIndex - exactTailSureLength - 1,
-            value: '0'
-          })
-        }
-      }
-    }
-  })
+    })
+  }
+  processLine('row', puz.left, answer, width)
+  processLine('column', puz.top, answer, height)
   return result
 }
 
@@ -342,73 +306,49 @@ export const resolveMaxNumber = (puz, answer) => {
     //   value: '1|0'
     // }
   ]
-  puz.left.forEach((row, index) => {
-    // line is like [4, 1, 2]
-    if (!isLineClear('row', answer, index)) {
-      const maxNumber = Math.max(...row)
-      let firstMarkedIndex = -1
-      let combinedMarks = 0
-      for (let i = 0; i < width; i++) {
-        if (answer[index][i] === '1') {
-          combinedMarks === 0 && (firstMarkedIndex = i)
-          combinedMarks++
-        } else {
-          if (combinedMarks >= maxNumber) {
-            if (combinedMarks > maxNumber) {
-              console.warn(`Invalid answer in row ${index}, maxNumber is ${maxNumber} but found ${combinedMarks}`)
-            }
-            if (firstMarkedIndex > 0) {
+  const processLine = (direction, lines, answer, length) => {
+    lines.forEach((line, index) => {
+      if (!isLineClear(direction, answer, index)) {
+        const maxNumber = Math.max(...line)
+        let firstMarkedIndex = -1
+        let combinedMarks = 0
+        for (let i = 0; i < length; i++) {
+          let item
+          if (direction === 'row') {
+            item = answer[index][i]
+          } else {
+            item = answer[i][index]
+          }
+          if (item === '1') {
+            combinedMarks === 0 && (firstMarkedIndex = i)
+            combinedMarks++
+          } else {
+            if (combinedMarks >= maxNumber) {
+              if (combinedMarks > maxNumber) {
+                console.warn(`Invalid answer in ${direction}, ${index}, maxNumber is ${maxNumber} but found ${combinedMarks}`)
+              }
+              if (firstMarkedIndex > 0) {
+                result.push({
+                  x: direction === 'row' ? firstMarkedIndex - 1 : index,
+                  y: direction === 'row' ? index : firstMarkedIndex - 1,
+                  value: '0'
+                })
+              }
               result.push({
-                x: firstMarkedIndex - 1,
-                y: index,
+                x: direction === 'row' ? i : index,
+                y: direction === 'row' ? index : i,
                 value: '0'
               })
             }
-            result.push({
-              x: i,
-              y: index,
-              value: '0'
-            })
+            firstMarkedIndex = -1
+            combinedMarks = 0
           }
-          firstMarkedIndex = -1
-          combinedMarks = 0
         }
       }
-    }
-  })
-  puz.top.forEach((col, index) => {
-    if (!isLineClear('column', answer, index)) {
-      const maxNumber = Math.max(...col)
-      let firstMarkedIndex = -1
-      let combinedMarks = 0
-      for (let i = 0; i < height; i++) {
-        if (answer[i][index] === '1') {
-          combinedMarks === 0 && (firstMarkedIndex = i)
-          combinedMarks++
-        } else {
-          if (combinedMarks >= maxNumber) {
-            if (combinedMarks > maxNumber) {
-              console.warn(`Invalid answer in col ${index}, maxNumber is ${maxNumber} but found ${combinedMarks}`)
-            }
-            if (firstMarkedIndex > 0) {
-              result.push({
-                x: index,
-                y: firstMarkedIndex - 1,
-                value: '0'
-              })
-            }
-            result.push({
-              x: index,
-              y: i,
-              value: '0'
-            })
-          }
-          firstMarkedIndex = -1
-          combinedMarks = 0
-        }
-      }
-    }
-  })
+    })
+  }
+  processLine('row', puz.left, answer, width)
+  processLine('column', puz.top, answer, height)
   return result
 }
 
