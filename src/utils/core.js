@@ -762,6 +762,8 @@ const isLineClear = (direction, answer, index) => {
 
 // 获取行/列信息，包含其中的所有空间spaces，标记的块markedPieces，以及已标记数量、未知数量、总数据等等
 const getLineInfo = (direction, answer, index) => {
+  const width = answer[0].length
+  const height = answer.length
   let markedCount = 0
   let crossedCount = 0
   let unknownCount = 0
@@ -770,20 +772,35 @@ const getLineInfo = (direction, answer, index) => {
   let currentMarkedPieceFromIndex = -1
   const spaces = []
   let currentSpaceFromIndex = -1
-  if (direction === 'row') {
-    for (let i = 0; i < answer[index].length; i++) {
+  let currentSpaceFilled = true // 当前space是否全部填充了内容（即中间填充了marked）
+  const processLine = (direction, answer, index, length) => {
+    for (let i = 0; i < length; i++) {
       totalCount++
-      if (answer[index][i] === '1') {
+      let item
+      if (direction === 'row') {
+        item = answer[index][i]
+      } else {
+        item = answer[i][index]
+      }
+      if (item === '1') {
         markedCount++
         if (currentMarkedPieceFromIndex === -1) {
           currentMarkedPieceFromIndex = i
         }
-      } else if (answer[index][i] === '0') {
+        if (currentSpaceFromIndex === -1) {
+          currentSpaceFromIndex = i
+        }
+      } else if (item === '0') {
         crossedCount++
         if (currentMarkedPieceFromIndex > -1) {
           const preSiblingIndex = currentMarkedPieceFromIndex - 1
           const sufSiblingIndex = i
-          const resolved = Boolean((preSiblingIndex === -1 || answer[index][preSiblingIndex] === '0') && (sufSiblingIndex === answer[index].length || answer[index][sufSiblingIndex] === '0'))
+          let resolved
+          if (direction === 'row') {
+            resolved = Boolean((preSiblingIndex === -1 || answer[index][preSiblingIndex] === '0') && (sufSiblingIndex === length || answer[index][sufSiblingIndex] === '0'))
+          } else {
+            resolved = Boolean((preSiblingIndex === -1 || answer[preSiblingIndex][index] === '0') && (sufSiblingIndex === length || answer[sufSiblingIndex][index] === '0'))
+          }
           markedPieces.push({
             fromIndex: currentMarkedPieceFromIndex,
             toIndex: i - 1,
@@ -796,16 +813,23 @@ const getLineInfo = (direction, answer, index) => {
           spaces.push({
             fromIndex: currentSpaceFromIndex,
             toIndex: i - 1,
-            length: i - 1 - currentSpaceFromIndex + 1
+            length: i - 1 - currentSpaceFromIndex + 1,
+            filled: currentSpaceFilled
           })
           currentSpaceFromIndex = -1
+          currentSpaceFilled = true
         }
       } else {
         unknownCount++
         if (currentMarkedPieceFromIndex > -1) {
           const preSiblingIndex = currentMarkedPieceFromIndex - 1
           const sufSiblingIndex = i
-          const resolved = Boolean((preSiblingIndex === -1 || answer[index][preSiblingIndex] === '0') && (sufSiblingIndex === answer[index].length || answer[index][sufSiblingIndex] === '0'))
+          let resolved
+          if (direction === 'row') {
+            resolved = Boolean((preSiblingIndex === -1 || answer[index][preSiblingIndex] === '0') && (sufSiblingIndex === length || answer[index][sufSiblingIndex] === '0'))
+          } else {
+            resolved = Boolean((preSiblingIndex === -1 || answer[preSiblingIndex][index] === '0') && (sufSiblingIndex === length || answer[sufSiblingIndex][index] === '0'))
+          }
           markedPieces.push({
             fromIndex: currentMarkedPieceFromIndex,
             toIndex: i - 1,
@@ -817,85 +841,22 @@ const getLineInfo = (direction, answer, index) => {
         if (currentSpaceFromIndex === -1) {
           currentSpaceFromIndex = i
         }
+        currentSpaceFilled = false
       }
     }
     if (currentMarkedPieceFromIndex > -1) {
       const preSiblingIndex = currentMarkedPieceFromIndex - 1
-      const sufSiblingIndex = answer[index].length
-      const resolved = Boolean((preSiblingIndex === -1 || answer[index][preSiblingIndex] === '0') && (sufSiblingIndex === answer[index].length || answer[index][sufSiblingIndex] === '0'))
-      markedPieces.push({
-        fromIndex: currentMarkedPieceFromIndex,
-        toIndex: answer[index].length - 1,
-        length: answer[index].length - 1 - currentMarkedPieceFromIndex + 1,
-        resolved
-      })
-      currentMarkedPieceFromIndex = -1
-    }
-    if (currentSpaceFromIndex > -1) {
-      spaces.push({
-        fromIndex: currentSpaceFromIndex,
-        toIndex: answer[index].length - 1,
-        length: answer[index].length - 1 - currentSpaceFromIndex + 1
-      })
-      currentSpaceFromIndex = -1
-    }
-  } else {
-    for (let i = 0; i < answer.length; i++) {
-      totalCount++
-      if (answer[i][index] === '1') {
-        markedCount++
-        if (currentMarkedPieceFromIndex === -1) {
-          currentMarkedPieceFromIndex = i
-        }
-      } else if (answer[i][index] === '0') {
-        crossedCount++
-        if (currentMarkedPieceFromIndex > -1) {
-          const preSiblingIndex = currentMarkedPieceFromIndex - 1
-          const sufSiblingIndex = i
-          const resolved = Boolean((preSiblingIndex === -1 || answer[preSiblingIndex][index] === '0') && (sufSiblingIndex === answer.length || answer[sufSiblingIndex][index] === '0'))
-          markedPieces.push({
-            fromIndex: currentMarkedPieceFromIndex,
-            toIndex: i - 1,
-            length: i - 1 - currentMarkedPieceFromIndex + 1,
-            resolved
-          })
-          currentMarkedPieceFromIndex = -1
-        }
-        if (currentSpaceFromIndex > -1) {
-          spaces.push({
-            fromIndex: currentSpaceFromIndex,
-            toIndex: i - 1,
-            length: i - 1 - currentSpaceFromIndex + 1
-          })
-          currentSpaceFromIndex = -1
-        }
+      const sufSiblingIndex = length
+      let resolved
+      if (direction === 'row') {
+        resolved = Boolean((preSiblingIndex === -1 || answer[index][preSiblingIndex] === '0') && (sufSiblingIndex === length || answer[index][sufSiblingIndex] === '0'))
       } else {
-        unknownCount++
-        if (currentMarkedPieceFromIndex > -1) {
-          const preSiblingIndex = currentMarkedPieceFromIndex - 1
-          const sufSiblingIndex = i
-          const resolved = Boolean((preSiblingIndex === -1 || answer[preSiblingIndex][index] === '0') && (sufSiblingIndex === answer.length || answer[sufSiblingIndex][index] === '0'))
-          markedPieces.push({
-            fromIndex: currentMarkedPieceFromIndex,
-            toIndex: i - 1,
-            length: i - 1 - currentMarkedPieceFromIndex + 1,
-            resolved
-          })
-          currentMarkedPieceFromIndex = -1
-        }
-        if (currentSpaceFromIndex === -1) {
-          currentSpaceFromIndex = i
-        }
+        resolved = Boolean((preSiblingIndex === -1 || answer[preSiblingIndex][index] === '0') && (sufSiblingIndex === length || answer[sufSiblingIndex][index] === '0'))
       }
-    }
-    if (currentMarkedPieceFromIndex > -1) {
-      const preSiblingIndex = currentMarkedPieceFromIndex - 1
-      const sufSiblingIndex = answer.length
-      const resolved = Boolean((preSiblingIndex === -1 || answer[preSiblingIndex][index] === '0') && (sufSiblingIndex === answer.length || answer[sufSiblingIndex][index] === '0'))
       markedPieces.push({
         fromIndex: currentMarkedPieceFromIndex,
-        toIndex: answer.length - 1,
-        length: answer.length - 1 - currentMarkedPieceFromIndex + 1,
+        toIndex: length - 1,
+        length: length - 1 - currentMarkedPieceFromIndex + 1,
         resolved
       })
       currentMarkedPieceFromIndex = -1
@@ -903,12 +864,15 @@ const getLineInfo = (direction, answer, index) => {
     if (currentSpaceFromIndex > -1) {
       spaces.push({
         fromIndex: currentSpaceFromIndex,
-        toIndex: answer.length - 1,
-        length: answer.length - 1 - currentSpaceFromIndex + 1
+        toIndex: length - 1,
+        length: length - 1 - currentSpaceFromIndex + 1,
+        filled: currentSpaceFilled
       })
       currentSpaceFromIndex = -1
+      currentSpaceFilled = true
     }
   }
+  processLine(direction, answer, index, direction === 'row' ? width : height)
   return {
     spaces,
     // [
