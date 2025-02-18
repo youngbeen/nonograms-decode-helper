@@ -325,7 +325,7 @@ export const resolveMaxNumber = (puz, answer) => {
                 if (p.fromIndex - 1 >= 0) {
                   tempResult.push({
                     x: direction === 'row' ? p.fromIndex - 1 : index,
-                    y: direction === 'row' ? index : p.formIndex - 1,
+                    y: direction === 'row' ? index : p.fromIndex - 1,
                     value: '0'
                   })
                 }

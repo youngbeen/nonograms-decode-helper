@@ -1183,7 +1183,7 @@ button:not(:last-of-type) {
   background: #999;
 }
 .clk-cell.style-1 {
-  background: radial-gradient(circle at center, #4ea5e8, #0987e7);
+  background: radial-gradient(circle at center, #2e84c6, #086db9);
   box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2); /* 添加阴影，增加立体感 */
   /* box-shadow: -2px -2px 5px #fff, 2px 2px 5px #babecc; */
 }
