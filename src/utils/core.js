@@ -434,45 +434,30 @@ export const resolveSplitMarkedPieces = (puz, answer) => {
     //   value: '1|0'
     // }
   ]
-  puz.left.forEach((row, index) => {
-    // line is like [4, 1, 2]
-    if (!isLineClear('row', answer, index)) {
-      const maxNumber = Math.max(...row)
-      const lineInfo = getLineInfo('row', answer, index)
-      if (lineInfo.markedPieces && lineInfo.markedPieces.length > 1) {
-        for (let i = 0; i < lineInfo.markedPieces.length - 1; i++) {
-          const markedPiece = lineInfo.markedPieces[i]
-          const nextMarkedPiece = lineInfo.markedPieces[i + 1]
-          if (!markedPiece.resolved && !nextMarkedPiece.resolved && (nextMarkedPiece.fromIndex - markedPiece.toIndex) === 2 && (nextMarkedPiece.toIndex - markedPiece.fromIndex + 1) > maxNumber) {
-            result.push({
-              x: markedPiece.toIndex + 1,
-              y: index,
-              value: '0'
-            })
+  const processLine = (direction, lines, answer) => {
+    lines.forEach((line, index) => {
+      // line is like [4, 1, 2]
+      if (!isLineClear(direction, answer, index)) {
+        const maxNumber = Math.max(...line)
+        const lineInfo = getLineInfo(direction, answer, index)
+        if (lineInfo.markedPieces && lineInfo.markedPieces.length > 1) {
+          for (let i = 0; i < lineInfo.markedPieces.length - 1; i++) {
+            const markedPiece = lineInfo.markedPieces[i]
+            const nextMarkedPiece = lineInfo.markedPieces[i + 1]
+            if (!markedPiece.resolved && !nextMarkedPiece.resolved && (nextMarkedPiece.fromIndex - markedPiece.toIndex) === 2 && (nextMarkedPiece.toIndex - markedPiece.fromIndex + 1) > maxNumber) {
+              result.push({
+                x: direction === 'row' ? markedPiece.toIndex + 1 : index,
+                y: direction === 'row' ? index : markedPiece.toIndex + 1,
+                value: '0'
+              })
+            }
           }
         }
       }
-    }
-  })
-  puz.top.forEach((col, index) => {
-    if (!isLineClear('column', answer, index)) {
-      const maxNumber = Math.max(...col)
-      const lineInfo = getLineInfo('column', answer, index)
-      if (lineInfo.markedPieces && lineInfo.markedPieces.length > 1) {
-        for (let i = 0; i < lineInfo.markedPieces.length - 1; i++) {
-          const markedPiece = lineInfo.markedPieces[i]
-          const nextMarkedPiece = lineInfo.markedPieces[i + 1]
-          if (!markedPiece.resolved && !nextMarkedPiece.resolved && (nextMarkedPiece.fromIndex - markedPiece.toIndex) === 2 && (nextMarkedPiece.toIndex - markedPiece.fromIndex + 1) > maxNumber) {
-            result.push({
-              x: index,
-              y: markedPiece.toIndex + 1,
-              value: '0'
-            })
-          }
-        }
-      }
-    }
-  })
+    })
+  }
+  processLine('row', puz.left, answer)
+  processLine('column', puz.top, answer)
   return result
 }
 
@@ -487,236 +472,107 @@ export const resolveSmallSideSpace = (puz, answer) => {
     //   value: '1|0'
     // }
   ]
-  puz.left.forEach((row, index) => {
-    // line is like [4, 1, 2]
-    if (row.length > 1 && !isLineClear('row', answer, index)) {
-      const preSideNumber = row[0]
-      const sufSideNumber = row[row.length - 1]
-      if (preSideNumber > 1) {
-        let preSideSpace = width
-        let firstUnknownIndex = -1
-        let combinedUnknowns = 0
-        for (let i = 0; i < width; i++) {
-          if (answer[index][i] === '') {
-            // 碰到未知格子，累计space
-            combinedUnknowns === 0 && (firstUnknownIndex = i)
-            combinedUnknowns++
-          } else if (answer[index][i] === '0') {
-            if (combinedUnknowns > 0) {
-              // 碰到了cross格子，并且之前已经在累计未知个数了，则说明第一个space已经明确了
-              preSideSpace = combinedUnknowns
+  const processLine = (direction, lines, answer, length) => {
+    lines.forEach((line, index) => {
+      // line is like [4, 1, 2]
+      if (line.length > 1 && !isLineClear(direction, answer, index)) {
+        const preSideNumber = line[0]
+        const sufSideNumber = line[line.length - 1]
+        if (preSideNumber > 1) {
+          let preSideSpace = length
+          let firstUnknownIndex = -1
+          let combinedUnknowns = 0
+          for (let i = 0; i < length; i++) {
+            let item
+            if (direction === 'row') {
+              item = answer[index][i]
+            } else {
+              item = answer[i][index]
+            }
+            if (item === '') {
+              // 碰到未知格子，累计space
+              combinedUnknowns === 0 && (firstUnknownIndex = i)
+              combinedUnknowns++
+            } else if (item === '0') {
+              if (combinedUnknowns > 0) {
+                // 碰到了cross格子，并且之前已经在累计未知个数了，则说明第一个space已经明确了
+                preSideSpace = combinedUnknowns
+                combinedUnknowns = 0
+                break
+              } else {
+                // 碰到了cross格子，但是没有累计未知个数，继续往下一个看
+                continue
+              }
+            } else {
+              // 碰到marked格子了，属于异常状态，放弃
               combinedUnknowns = 0
               break
-            } else {
-              // 碰到了cross格子，但是没有累计未知个数，继续往下一个看
-              continue
             }
-          } else {
-            // 碰到marked格子了，属于异常状态，放弃
+          }
+          if (combinedUnknowns > 0) {
+            preSideSpace = combinedUnknowns
             combinedUnknowns = 0
-            break
+          }
+          if (preSideNumber > preSideSpace) {
+            for (let i = firstUnknownIndex; i < firstUnknownIndex + preSideSpace; i++) {
+              result.push({
+                x: direction === 'row' ? i : index,
+                y: direction === 'row' ? index : i,
+                value: '0'
+              })
+            }
           }
         }
-        if (combinedUnknowns > 0) {
-          preSideSpace = combinedUnknowns
-          combinedUnknowns = 0
-        }
-        if (preSideNumber > preSideSpace) {
-          for (let i = firstUnknownIndex; i < firstUnknownIndex + preSideSpace; i++) {
-            result.push({
-              x: i,
-              y: index,
-              value: '0'
-            })
-          }
-        }
-      }
-      if (sufSideNumber > 1) {
-        let sufSideSpace = width
-        let firstUnknownIndex = -1
-        let combinedUnknowns = 0
-        for (let i = width - 1; i >= 0; i--) {
-          if (answer[index][i] === '') {
-            // 碰到未知格子，累计space
-            combinedUnknowns === 0 && (firstUnknownIndex = i)
-            combinedUnknowns++
-          } else if (answer[index][i] === '0') {
-            if (combinedUnknowns > 0) {
-              // 碰到了cross格子，并且之前已经在累计未知个数了，则说明第一个space已经明确了
-              sufSideSpace = combinedUnknowns
+        if (sufSideNumber > 1) {
+          let sufSideSpace = length
+          let firstUnknownIndex = -1
+          let combinedUnknowns = 0
+          for (let i = length - 1; i >= 0; i--) {
+            let item
+            if (direction === 'row') {
+              item = answer[index][i]
+            } else {
+              item = answer[i][index]
+            }
+            if (item === '') {
+              // 碰到未知格子，累计space
+              combinedUnknowns === 0 && (firstUnknownIndex = i)
+              combinedUnknowns++
+            } else if (item === '0') {
+              if (combinedUnknowns > 0) {
+                // 碰到了cross格子，并且之前已经在累计未知个数了，则说明第一个space已经明确了
+                sufSideSpace = combinedUnknowns
+                combinedUnknowns = 0
+                break
+              } else {
+                // 碰到了cross格子，但是没有累计未知个数，继续往下一个看
+                continue
+              }
+            } else {
+              // 碰到marked格子了，属于异常状态，放弃
               combinedUnknowns = 0
               break
-            } else {
-              // 碰到了cross格子，但是没有累计未知个数，继续往下一个看
-              continue
             }
-          } else {
-            // 碰到marked格子了，属于异常状态，放弃
+          }
+          if (combinedUnknowns > 0) {
+            sufSideSpace = combinedUnknowns
             combinedUnknowns = 0
-            break
           }
-        }
-        if (combinedUnknowns > 0) {
-          sufSideSpace = combinedUnknowns
-          combinedUnknowns = 0
-        }
-        if (sufSideNumber > sufSideSpace) {
-          for (let i = firstUnknownIndex; i > firstUnknownIndex - sufSideSpace; i--) {
-            result.push({
-              x: i,
-              y: index,
-              value: '0'
-            })
-          }
-        }
-      }
-    }
-  })
-  puz.top.forEach((col, index) => {
-    if (col.length > 1 && !isLineClear('column', answer, index)) {
-      const preSideNumber = col[0]
-      const sufSideNumber = col[col.length - 1]
-      if (preSideNumber > 1) {
-        let preSideSpace = height
-        let firstUnknownIndex = -1
-        let combinedUnknowns = 0
-        for (let i = 0; i < height; i++) {
-          if (answer[i][index] === '') {
-            // 碰到未知格子，累计space
-            combinedUnknowns === 0 && (firstUnknownIndex = i)
-            combinedUnknowns++
-          } else if (answer[i][index] === '0') {
-            if (combinedUnknowns > 0) {
-              // 碰到了cross格子，并且之前已经在累计未知个数了，则说明第一个space已经明确了
-              preSideSpace = combinedUnknowns
-              combinedUnknowns = 0
-              break
-            } else {
-              // 碰到了cross格子，但是没有累计未知个数，继续往下一个看
-              continue
+          if (sufSideNumber > sufSideSpace) {
+            for (let i = firstUnknownIndex; i > firstUnknownIndex - sufSideSpace; i--) {
+              result.push({
+                x: direction === 'row' ? i : index,
+                y: direction === 'row' ? index : i,
+                value: '0'
+              })
             }
-          } else {
-            // 碰到marked格子了，属于异常状态，放弃
-            combinedUnknowns = 0
-            break
-          }
-        }
-        if (combinedUnknowns > 0) {
-          preSideSpace = combinedUnknowns
-          combinedUnknowns = 0
-        }
-        if (preSideNumber > preSideSpace) {
-          for (let i = firstUnknownIndex; i < firstUnknownIndex + preSideSpace; i++) {
-            result.push({
-              x: index,
-              y: i,
-              value: '0'
-            })
           }
         }
       }
-      if (sufSideNumber > 1) {
-        let sufSideSpace = height
-        let firstUnknownIndex = -1
-        let combinedUnknowns = 0
-        for (let i = height - 1; i >= 0; i--) {
-          if (answer[i][index] === '') {
-            // 碰到未知格子，累计space
-            combinedUnknowns === 0 && (firstUnknownIndex = i)
-            combinedUnknowns++
-          } else if (answer[i][index] === '0') {
-            if (combinedUnknowns > 0) {
-              // 碰到了cross格子，并且之前已经在累计未知个数了，则说明第一个space已经明确了
-              sufSideSpace = combinedUnknowns
-              combinedUnknowns = 0
-              break
-            } else {
-              // 碰到了cross格子，但是没有累计未知个数，继续往下一个看
-              continue
-            }
-          } else {
-            // 碰到marked格子了，属于异常状态，放弃
-            combinedUnknowns = 0
-            break
-          }
-        }
-        if (combinedUnknowns > 0) {
-          sufSideSpace = combinedUnknowns
-          combinedUnknowns = 0
-        }
-        if (sufSideNumber > sufSideSpace) {
-          for (let i = firstUnknownIndex; i > firstUnknownIndex - sufSideSpace; i--) {
-            result.push({
-              x: index,
-              y: i,
-              value: '0'
-            })
-          }
-        }
-      }
-    }
-  })
-  return result
-}
-
-// NOTE 此策略已经被resolveMaxNumber涵盖了，已废弃
-export const resolveAllOne = (puz, answer) => {
-  // 根据所有项都是1的行/列，将已明确的marked周围标cross
-  const width = puz.top.length
-  const height = puz.left.length
-  const result = [
-    // {
-    //   x: 0,
-    //   y: 0,
-    //   value: '1|0'
-    // }
-  ]
-  puz.top.forEach((col, index) => {
-    if (col.every(c => c === 1)) {
-      for (let j = 0; j < height; j++) {
-        const val = answer[j][index]
-        if (val === '1') {
-          if (j - 1 >= 0) {
-            result.push({
-              x: index,
-              y: j - 1,
-              value: '0'
-            })
-          }
-          if (j + 1 < height) {
-            result.push({
-              x: index,
-              y: j + 1,
-              value: '0'
-            })
-          }
-        }
-      }
-    }
-  })
-  puz.left.forEach((row, index) => {
-    if (row.every(r => r === 1)) {
-      for (let j = 0; j < width; j++) {
-        const val = answer[index][j]
-        if (val === '1') {
-          if (j - 1 >= 0) {
-            result.push({
-              x: j - 1,
-              y: index,
-              value: '0'
-            })
-          }
-          if (j + 1 < width) {
-            result.push({
-              x: j + 1,
-              y: index,
-              value: '0'
-            })
-          }
-        }
-      }
-    }
-  })
+    })
+  }
+  processLine('row', puz.left, answer, width)
+  processLine('column', puz.top, answer, height)
   return result
 }
 
@@ -731,74 +587,50 @@ export const resolveLonelyNumber = (puz, answer) => {
     //   value: '1|0'
     // }
   ]
-  puz.top.forEach((col, index) => {
-    if (col.length === 1 && col[0] > 0) {
-      let startIndex = -1
-      let endIndex = -1
-      for (let j = 0; j < height; j++) {
-        const val = answer[j][index]
-        if (val === '1') {
-          if (startIndex === -1) {
-            startIndex = j
+  const processLine = (direction, lines, answer, length) => {
+    lines.forEach((line, index) => {
+      // line is like [4, 1, 2]
+      if (line.length === 1 && line[0] > 0) {
+        let startIndex = -1
+        let endIndex = -1
+        for (let j = 0; j < length; j++) {
+          let val
+          if (direction === 'row') {
+            val = answer[index][j]
+          } else {
+            val = answer[j][index]
           }
-          endIndex = j
-        }
-      }
-      if (startIndex > -1 && endIndex > -1) {
-        const exactMarkedLength = endIndex - startIndex + 1
-        const notSureMarkedLength = col[0] - exactMarkedLength
-        for (let j = 0; j < height; j++) {
-          if (j < startIndex - notSureMarkedLength || j > endIndex + notSureMarkedLength) {
-            result.push({
-              x: index,
-              y: j,
-              value: '0'
-            })
-          } else if (j > startIndex && j < endIndex) {
-            result.push({
-              x: index,
-              y: j,
-              value: '1'
-            })
+          if (val === '1') {
+            if (startIndex === -1) {
+              startIndex = j
+            }
+            endIndex = j
           }
         }
-      }
-    }
-  })
-  puz.left.forEach((row, index) => {
-    if (row.length === 1 && row[0] > 0) {
-      let startIndex = -1
-      let endIndex = -1
-      for (let j = 0; j < width; j++) {
-        const val = answer[index][j]
-        if (val === '1') {
-          if (startIndex === -1) {
-            startIndex = j
-          }
-          endIndex = j
-        }
-      }
-      if (startIndex > -1 && endIndex > -1) {
-        const exactMarkedLength = endIndex - startIndex + 1
-        const notSureMarkedLength = row[0] - exactMarkedLength
-        for (let j = 0; j < width; j++) {
-          if (j < startIndex - notSureMarkedLength || j > endIndex + notSureMarkedLength) {
-            result.push({
-              x: j,
-              y: index,
-              value: '0'
-            })
-          } else if (j > startIndex && j < endIndex) {
-            result.push({
-              x: j,
-              y: index,
-              value: '1'
-            })
+        if (startIndex > -1 && endIndex > -1) {
+          const exactMarkedLength = endIndex - startIndex + 1
+          const notSureMarkedLength = line[0] - exactMarkedLength
+          for (let j = 0; j < length; j++) {
+            if (j < startIndex - notSureMarkedLength || j > endIndex + notSureMarkedLength) {
+              result.push({
+                x: direction === 'row' ? j : index,
+                y: direction === 'row' ? index : j,
+                value: '0'
+              })
+            } else if (j > startIndex && j < endIndex) {
+              result.push({
+                x: direction === 'row' ? j : index,
+                y: direction === 'row' ? index : j,
+                value: '1'
+              })
+            }
           }
         }
       }
-    }
-  })
+    })
+  }
+  processLine('row', puz.left, answer, width)
+  processLine('column', puz.top, answer, height)
   return result
 }
 

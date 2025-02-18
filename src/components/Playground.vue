@@ -744,6 +744,10 @@ const save = () => {
 const load = () => {
   const savedData = getSavedCopy()
   if (savedData) {
+    if (savedData.puz.top.length !== puz.top.length || savedData.puz.left.length !== puz.left.length) {
+      console.log('不一样尺寸的问题，清理掉之前的记录')
+      clearStorage()
+    }
     answerMap.data = savedData.answerMap
     puz.top = savedData.puz.top
     puz.left = savedData.puz.left
