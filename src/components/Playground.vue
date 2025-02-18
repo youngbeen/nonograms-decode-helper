@@ -1166,7 +1166,8 @@ button:not(:last-of-type) {
   margin-right: 2px;
   width: 26px;
   height: 26px;
-  background: rgb(255, 176, 176);
+  border-radius: 2px;
+  background: rgb(255, 206, 206);
   user-select: none;
 }
 .clk-cell:nth-of-type(5n) {
@@ -1182,11 +1183,21 @@ button:not(:last-of-type) {
   background: #999;
 }
 .clk-cell.style-1 {
-  background: rgb(52, 52, 186);
+  background: radial-gradient(circle at center, #4ea5e8, #0987e7);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2); /* 添加阴影，增加立体感 */
   /* box-shadow: -2px -2px 5px #fff, 2px 2px 5px #babecc; */
 }
+/* .clk-cell.style-1:before {
+  content: '';
+  position: absolute;
+  top: -10%;
+  left: -10%;
+  width: 120%;
+  height: 120%;
+  background: radial-gradient(circle at center, rgba(255, 255, 255, 0.8), transparent);
+} */
 .clk-cell.style-0 {
-  background: rgb(235, 235, 235);
+  background: rgb(240, 240, 240);
   box-shadow: inset 1px 1px 2px #babecc, inset -1px -1px 2px #fff;
 }
 .clk-cell.style-0:before {

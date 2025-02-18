@@ -295,11 +295,11 @@ export const resolveEdge = (puz, answer) => {
   return result
 }
 
-// 方法根据最大的数字不管有几个，只要已经出现了连续最大数字个marked格子，则两边必定为cross
+// 方法每次根据最大的数字已经出现的明确marked块，进行两边必定为cross的标识，直到已经明确的最大数字个数不够
 export const resolveMaxNumber = (puz, answer) => {
   const width = puz.top.length
   const height = puz.left.length
-  const result = [
+  let result = [
     // {
     //   x: 0,
     //   y: 0,
@@ -309,41 +309,103 @@ export const resolveMaxNumber = (puz, answer) => {
   const processLine = (direction, lines, answer, length) => {
     lines.forEach((line, index) => {
       if (!isLineClear(direction, answer, index)) {
-        const maxNumber = Math.max(...line)
-        let firstMarkedIndex = -1
-        let combinedMarks = 0
-        for (let i = 0; i < length; i++) {
-          let item
-          if (direction === 'row') {
-            item = answer[index][i]
+        const lineInfo = getLineInfo(direction, answer, index)
+        const puzInfo = getPuzLineInfo(line)
+        let flagAllNumbersFound = true
+        const tempResult = []
+        for (let j = puzInfo.numberInfo.length - 1; j >= 0; j--) {
+          // 从目前最大的数字开始检索已经明确出来的相同marked块，进行左右cross标识
+          const item = puzInfo.numberInfo[j]
+          let exactCount = 0
+          lineInfo.markedPieces.forEach(p => {
+            if (p.length === item.number) {
+              exactCount++
+              if (!p.resolved) {
+                // 左右可以明确是cross
+                if (p.fromIndex - 1 >= 0) {
+                  tempResult.push({
+                    x: direction === 'row' ? p.fromIndex - 1 : index,
+                    y: direction === 'row' ? index : p.formIndex - 1,
+                    value: '0'
+                  })
+                }
+                if (p.toIndex + 1 < length) {
+                  tempResult.push({
+                    x: direction === 'row' ? p.toIndex + 1 : index,
+                    y: direction === 'row' ? index : p.toIndex + 1,
+                    value: '0'
+                  })
+                }
+              }
+            }
+          })
+          if (exactCount >= item.count) {
+            // 目前最大数字出现的明确数量已达标，继续往下一个最大的数字进行推理
+            if (exactCount > item.count) {
+              console.warn(`Invalid ${direction} ${index}, number ${item.number} should appear ${item.count} times but found ${exactCount}`)
+            }
           } else {
-            item = answer[i][index]
+            // 目前最大数字出现的明确数量不足，不再往下推理
+            flagAllNumbersFound = false
+            break
           }
-          if (item === '1') {
-            combinedMarks === 0 && (firstMarkedIndex = i)
-            combinedMarks++
-          } else {
-            if (combinedMarks >= maxNumber) {
-              if (combinedMarks > maxNumber) {
-                console.warn(`Invalid answer in ${direction}, ${index}, maxNumber is ${maxNumber} but found ${combinedMarks}`)
-              }
-              if (firstMarkedIndex > 0) {
-                result.push({
-                  x: direction === 'row' ? firstMarkedIndex - 1 : index,
-                  y: direction === 'row' ? index : firstMarkedIndex - 1,
-                  value: '0'
-                })
-              }
+        }
+        if (flagAllNumbersFound) {
+          // 所有当前行列的数字都已经出现，把所有还没标识的格子全部标识为cross
+          for (let i = 0; i < length; i++) {
+            let item
+            if (direction === 'row') {
+              item = answer[index][i]
+            } else {
+              item = answer[i][index]
+            }
+            if (!item) {
               result.push({
                 x: direction === 'row' ? i : index,
                 y: direction === 'row' ? index : i,
                 value: '0'
               })
             }
-            firstMarkedIndex = -1
-            combinedMarks = 0
           }
+        } else {
+          // 正常推理出了部分内容，将内容推入result
+          result = [...result, ...tempResult]
         }
+        // const maxNumber = Math.max(...line)
+        // let firstMarkedIndex = -1
+        // let combinedMarks = 0
+        // for (let i = 0; i < length; i++) {
+        //   let item
+        //   if (direction === 'row') {
+        //     item = answer[index][i]
+        //   } else {
+        //     item = answer[i][index]
+        //   }
+        //   if (item === '1') {
+        //     combinedMarks === 0 && (firstMarkedIndex = i)
+        //     combinedMarks++
+        //   } else {
+        //     if (combinedMarks >= maxNumber) {
+        //       if (combinedMarks > maxNumber) {
+        //         console.warn(`Invalid answer in ${direction}, ${index}, maxNumber is ${maxNumber} but found ${combinedMarks}`)
+        //       }
+        //       if (firstMarkedIndex > 0) {
+        //         result.push({
+        //           x: direction === 'row' ? firstMarkedIndex - 1 : index,
+        //           y: direction === 'row' ? index : firstMarkedIndex - 1,
+        //           value: '0'
+        //         })
+        //       }
+        //       result.push({
+        //         x: direction === 'row' ? i : index,
+        //         y: direction === 'row' ? index : i,
+        //         value: '0'
+        //       })
+        //     }
+        //     firstMarkedIndex = -1
+        //     combinedMarks = 0
+        //   }
+        // }
       }
     })
   }
@@ -879,7 +941,8 @@ const getLineInfo = (direction, answer, index) => {
     //   {
     //     fromIndex: 0,
     //     toIndex: 2,
-    //     length: 3
+    //     length: 3,
+    //     filled: true, // 当前space是否全部被填充完毕
     //   }
     // ]
     markedPieces,
