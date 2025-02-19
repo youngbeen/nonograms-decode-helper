@@ -20,6 +20,7 @@ import InputAssist from './InputAssist.vue'
 // }
 
 const debug = ref(false)
+const theme = ref('')
 let status = ref('init') // init | resolving
 const answerMap = reactive({
   data: [
@@ -107,6 +108,11 @@ onMounted(() => {
   }
   // 恢复用户偏好设置
   const userPreset = getPreset()
+  if (userPreset.theme) {
+    theme.value = userPreset.theme
+  } else {
+    theme.value = ''
+  }
   if (userPreset.panelPositionSave) {
     panelPositionSave.left = userPreset.panelPositionSave.left
     panelPositionSave.top = userPreset.panelPositionSave.top
@@ -783,6 +789,7 @@ const restart = () => {
   panelPositionSave.left = panelLeft.value
   panelPositionSave.top = panelTop.value
   savePreset({
+    theme: theme.value,
     panelPositionSave: {
       left: panelPositionSave.left,
       top: panelPositionSave.top,
@@ -906,6 +913,20 @@ const handleDragEnd = (e) => {
       <button @click="getSaveString">Get Save String</button>
       <button @click="restart">Restart</button>
     </p>
+    <p class="action-seg" v-show="status === 'resolving'">
+      <p>Theme</p>
+      <div style="display: flex; align-items: center;">
+        <div class="theme-cell"
+          :class="[theme === '' && 'active']"
+          @click="theme = ''"></div>
+        <div class="theme-cell naturegreen"
+          :class="[theme === 'naturegreen' && 'active']"
+          @click="theme = 'naturegreen'"></div>
+        <div class="theme-cell techdark"
+          :class="[theme === 'techdark' && 'active']"
+          @click="theme = 'techdark'"></div>
+      </div>
+    </p>
     <div class="box-tip">
       <div class="cs-tip">
         <div class="tip">Size {{ width }} x {{ height }}</div>
@@ -918,7 +939,10 @@ const handleDragEnd = (e) => {
   </div>
 
   <div class="box-main"
-    :class="[status === 'resolving' && 'free']"
+    :class="[
+      theme ? theme : '',
+      status === 'resolving' && 'free'
+    ]"
     @mouseup="handleMouseUp">
     <div class="box-top-indicators">
       <div class="box-top-indi"
@@ -990,7 +1014,12 @@ const handleDragEnd = (e) => {
     :menu="lastInput.history"></input-assist>
 </template>
 
-<style scoped>
+<style lang="scss" scoped>
+@use "../assets/var.scss" as var;
+@use "../assets/thinkblue-theme.scss" as thinkblue;
+@use "../assets/naturegreen-theme.scss" as naturegreen;
+@use "../assets/techdark-theme.scss" as techdark;
+
 .action-panel {
   position: fixed;
   z-index: 9;
@@ -1001,115 +1030,77 @@ const handleDragEnd = (e) => {
   height: 200px;
   padding: 16px 32px;
   background: #fff;
-  border: 2px solid rgb(170, 190, 255);
-}
-.action-panel.right {
-  /* left: auto;
-  top: 0;
-  right: 0; */
-  width: 240px;
-  height: auto;
-}
-.action-seg {
-  padding: 6px 0;
-  border-bottom: 1px solid rgb(237, 237, 237);
-}
-.box-main {
-  margin-top: 200px;
-}
-.box-main.free {
-  margin-top: auto;
-}
-.number-input {
-  min-width: 400px;
-  height: 30px;
-  line-height: 30px;
-}
-button:not(:last-of-type) {
-  margin-right: 1rem;
-}
-.box-top-indicators {
-  margin-left: 262px;
-  user-select: none;
-}
-.box-top-indi {
-  position: relative;
-  display: inline-block;
-  margin-right: 2px;
-  width:26px;
-  height: auto;
-  color: #888;
-  background: rgb(250, 250, 250);
-  transition: all 0.3s;
-}
-.box-top-indi.focus {
-  color: #333;
-  background: rgb(170, 190, 255);
-}
-.box-top-indi.danger {
-  color: #333;
-  background: rgba(255, 215, 215, 1);
-}
-.box-top-indi:hover > .icon-btn {
-  opacity: 1;
-}
-.box-left-indicators {
-  position: absolute;
-  left: 0;
-  top: 0;
-  width: 260px;
-  user-select: none;
-}
-.box-left-indi {
-  position: relative;
-  /* display: inline-block; */
-  margin-bottom: 2px;
-  width: auto;
-  height: 26px;
-  color: #888;
-  background: rgb(250, 250, 250);
-  text-align: right;
-  transition: all 0.3s;
-}
-.box-left-indi.focus {
-  color: #333;
-  background: rgb(170, 190, 255);
-}
-.box-left-indi.danger {
-  color: #333;
-  background: rgba(255, 215, 215, 1);
-}
-.box-left-indi:hover > .icon-btn {
-  opacity: 1;
+  border: 2px solid var.$system-color;
+  &.right {
+    /* left: auto;
+    top: 0;
+    right: 0; */
+    width: 240px;
+    height: auto;
+  }
+  .number-input {
+    min-width: 400px;
+    height: 30px;
+    line-height: 30px;
+  }
+  .action-seg {
+    padding: 6px 0;
+    border-bottom: 1px solid var.$border-color;
+    button:not(:last-of-type) {
+      margin-right: 1rem;
+    }
+    .theme-cell {
+      position: relative;
+      display: inline-block;
+      margin-right: 4px;
+      width: 26px;
+      height: 26px;
+      border-radius: 2px;
+      background: radial-gradient(circle at center, thinkblue.$theme-color-highlight, thinkblue.$theme-color);
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+      user-select: none;
+      &.naturegreen {
+        background: radial-gradient(circle at center, naturegreen.$theme-color-highlight, naturegreen.$theme-color);
+      }
+      &.techdark {
+        background: radial-gradient(circle at center, techdark.$theme-color-highlight, techdark.$theme-color);
+      }
+      &.active {
+        position: relative;
+        &:before {
+          content: "";
+          position: absolute;
+          right: 2px;
+          top: 2px;
+          width: 4px;
+          height: 4px;
+          border-radius: 50%;
+          background: #fff;
+        }
+      }
+    }
+  }
 }
 .cell {
   width: 26px;
   height: 26px;
   line-height: 26px;
   text-align: center;
-}
-.cell.danger {
-  color: red;
-  /* border: 1px dashed red; */
-  /* border-radius: 50%; */
-  text-decoration: underline;
-  font-weight: bold;
-}
-.box-left-indi > .cell {
-  display: inline-block;
+  &.danger {
+    color: red;
+    text-decoration: underline;
+    font-weight: bold;
+  }
 }
 .icon-btn {
   width: 20px;
   height: 20px;
   padding: 2px;
-  background: rgb(170, 190, 255);
+  background: var.$system-color;
   border-radius: 4px;
   cursor: pointer;
   transition: all 0.3s;
 }
-/* .icon-btn.danger {
-  background: rgb(255, 124, 124);
-} */
 .icon-more {
   position: absolute;
   z-index: 2;
@@ -1118,99 +1109,193 @@ button:not(:last-of-type) {
   box-shadow: 1px 1px 2px rgba(115, 155, 155, 0.8);
   opacity: 0;
 }
-/* .icon-delete {
-  position: absolute;
-  z-index: 2;
-  left: 5px;
-  bottom: -16px;
-  box-shadow: 1px 1px 2px rgba(115, 155, 155, 0.8);
-  opacity: 0;
-} */
-/* .box-left-indi > .icon-edit {
-  left: auto;
-  right: -16px;
-  top: 5px;
-} */
-.box-left-indi > .icon-more {
-  left: -16px;
-  top: 5px;
-}
-.box-canvas {
-  margin-left: 262px;
-  /* background: red; */
-}
-.row {
-  margin-bottom: 2px;
-}
-.row-box {
-  display: inline-block;
-}
-.row:nth-of-type(5n) > .row-box {
-  position: relative;
-  /* top: 2px; */
-  /* border-bottom: 1px solid rgb(255, 176, 176); */
-  /* border-bottom: 1px solid red; */
-}
-.row:nth-of-type(5n) > .row-box:after {
-  content: "";
-  position: absolute;
-  width: 100%;
-  height: 2px;
-  bottom: -2px;
-  left: 0;
-  background: #999;
-}
-.clk-cell {
-  position: relative;
-  display: inline-block;
-  margin-right: 2px;
-  width: 26px;
-  height: 26px;
-  border-radius: 2px;
-  background: rgb(255, 206, 206);
-  user-select: none;
-}
-.clk-cell:nth-of-type(5n) {
-  position: relative;
-}
-.clk-cell:nth-of-type(5n):after {
-  content: "";
-  position: absolute;
-  width: 2px;
-  height: 100%;
-  right: -2px;
-  top: 0;
-  background: #999;
-}
-.clk-cell.style-1 {
-  background: radial-gradient(circle at center, #2e84c6, #086db9);
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2); /* 添加阴影，增加立体感 */
-  /* box-shadow: -2px -2px 5px #fff, 2px 2px 5px #babecc; */
-}
-/* .clk-cell.style-1:before {
-  content: '';
-  position: absolute;
-  top: -10%;
-  left: -10%;
-  width: 120%;
-  height: 120%;
-  background: radial-gradient(circle at center, rgba(255, 255, 255, 0.8), transparent);
-} */
-.clk-cell.style-0 {
-  background: rgb(240, 240, 240);
-  box-shadow: inset 1px 1px 2px #babecc, inset -1px -1px 2px #fff;
-}
-.clk-cell.style-0:before {
-  content: "×";
-  position: absolute;
-  left: 0;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 1;
-  line-height: 24px;
-  color: rgb(185, 185, 185);
-  font-size: 28px;
-  text-align: center;
+.box-main {
+  margin-top: 200px;
+  &.free {
+    margin-top: auto;
+  }
+  .box-top-indicators {
+    margin-left: 262px;
+    user-select: none;
+    .box-top-indi {
+      position: relative;
+      display: inline-block;
+      margin-right: 2px;
+      width: 26px;
+      height: auto;
+      color: var.$indicator-text-color;
+      background: var.$indicator-bg-color;
+      transition: all 0.3s;
+      &.focus {
+        color: #333;
+        background: thinkblue.$theme-color-secondary;
+      }
+      &.danger {
+        color: #333;
+        background: var.$indicator-bg-color-danger;
+      }
+      &:hover > .icon-btn {
+        opacity: 1;
+      }
+    }
+  }
+  .box-left-indicators {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 260px;
+    user-select: none;
+    .box-left-indi {
+      position: relative;
+      /* display: inline-block; */
+      margin-bottom: 2px;
+      width: auto;
+      height: 26px;
+      color: var.$indicator-text-color;
+      background: var.$indicator-bg-color;
+      text-align: right;
+      transition: all 0.3s;
+      &.focus {
+        color: #333;
+        background: thinkblue.$theme-color-secondary;
+      }
+      &.danger {
+        color: #333;
+        background: var.$indicator-bg-color-danger;
+      }
+      &:hover > .icon-btn {
+        opacity: 1;
+      }
+      & > .cell {
+        display: inline-block;
+      }
+      & > .icon-more {
+        left: -16px;
+        top: 5px;
+      }
+    }
+  }
+  .box-canvas {
+    margin-left: 262px;
+    /* background: red; */
+    .row {
+      margin-bottom: 2px;
+      .row-box {
+        display: inline-block;
+        .clk-cell {
+          position: relative;
+          display: inline-block;
+          margin-right: 2px;
+          width: 26px;
+          height: 26px;
+          border-radius: 2px;
+          background: var.$system-color-danger;
+          user-select: none;
+          &:nth-of-type(5n) {
+            position: relative;
+            &:after {
+              content: "";
+              position: absolute;
+              width: 2px;
+              height: 100%;
+              right: -2px;
+              top: 0;
+              background: #999;
+            }
+          }
+          &.style-1 {
+            background: radial-gradient(circle at center, thinkblue.$theme-color-highlight, thinkblue.$theme-color);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2); /* 添加阴影，增加立体感 */
+            /* box-shadow: -2px -2px 5px #fff, 2px 2px 5px #babecc; */
+          }
+          &.style-0 {
+            background: rgb(240, 240, 240);
+            box-shadow: inset 1px 1px 2px #babecc, inset -1px -1px 2px #fff;
+            &:before {
+              content: "×";
+              position: absolute;
+              left: 0;
+              top: 0;
+              right: 0;
+              bottom: 0;
+              z-index: 1;
+              line-height: 24px;
+              color: rgb(185, 185, 185);
+              font-size: 28px;
+              text-align: center;
+            }
+          }
+        }
+      }
+    }
+    &:nth-of-type(5n) > .row-box {
+      position: relative;
+      /* top: 2px; */
+      /* border-bottom: 1px solid red; */
+      &:after {
+        content: "";
+        position: absolute;
+        width: 100%;
+        height: 2px;
+        bottom: -2px;
+        left: 0;
+        background: #999;
+      }
+    }
+  }
+  &.naturegreen {
+    .box-top-indicators {
+      .box-top-indi {
+        &.focus {
+          background: naturegreen.$theme-color-secondary;
+        }
+      }
+    }
+    .box-left-indicators {
+      .box-left-indi {
+        &.focus {
+          background: naturegreen.$theme-color-secondary;
+        }
+      }
+    }
+    .box-canvas {
+      .row {
+        .row-box {
+          .clk-cell {
+            &.style-1 {
+              background: radial-gradient(circle at center, naturegreen.$theme-color-highlight, naturegreen.$theme-color);
+            }
+          }
+        }
+      }
+    }
+  }
+  &.techdark {
+    .box-top-indicators {
+      .box-top-indi {
+        &.focus {
+          background: techdark.$theme-color-secondary;
+        }
+      }
+    }
+    .box-left-indicators {
+      .box-left-indi {
+        &.focus {
+          background: techdark.$theme-color-secondary;
+        }
+      }
+    }
+    .box-canvas {
+      .row {
+        .row-box {
+          .clk-cell {
+            &.style-1 {
+              background: radial-gradient(circle at center, techdark.$theme-color-highlight, techdark.$theme-color);
+            }
+          }
+        }
+      }
+    }
+  }
 }
 </style>

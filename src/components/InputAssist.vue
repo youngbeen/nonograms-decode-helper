@@ -80,12 +80,14 @@ const handleSelect = (content) => {
   </div>
 </template>
 
-<style scoped>
+<style lang="scss" scoped>
+@use "../assets/var.scss" as var;
+
 .box-input-assist {
   position: fixed;
   z-index: 11;
   padding: 4px;
-  border: 1px solid rgb(170, 190, 255);
+  border: 1px solid var.$system-color;
   background: rgba(255, 255, 255, 1);
   color: #333;
   font-size: 12px;
@@ -96,13 +98,13 @@ const handleSelect = (content) => {
   width: 20px;
   height: 24px;
   line-height: 20px;
-  border: 1px solid rgb(170, 190, 255);
+  border: 1px solid var.$system-color;
   text-align: center;
   font-size: 13px;
   cursor: default;
 }
 .count-cell.active {
-  background: rgb(170, 190, 255);;
+  background: var.$system-color;
 }
 hr {
   margin-top: 4px;
@@ -119,7 +121,7 @@ hr {
   cursor: default;
 }
 .menu-item:hover {
-  background: rgb(170, 190, 255);
+  background: var.$system-color;
 }
 .icon {
   margin-right: 4px;

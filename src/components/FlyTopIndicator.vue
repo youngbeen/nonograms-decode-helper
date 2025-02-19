@@ -17,7 +17,9 @@ const props = defineProps(['isShow', 'index', 'isDanger', 'data', 'answerMapCalc
   </div>
 </template>
 
-<style scoped>
+<style lang="scss" scoped>
+@use "../assets/var.scss" as var;
+
 .fly-top-indicator {
   position: fixed;
   z-index: 10;
@@ -26,25 +28,25 @@ const props = defineProps(['isShow', 'index', 'isDanger', 'data', 'answerMapCalc
   width: 26px;
   height: auto;
   color: #333;
-  background: rgba(250, 250, 250, 1);
-  border: 1px solid rgb(170, 190, 255);
+  background: var.$indicator-bg-color;
+  border: 1px solid var.$system-color;
   box-shadow: 1px 1px 2px rgba(115, 155, 155, 0.8);
   transition: all 0.3s;
   pointer-events: none;
-}
-.fly-top-indicator.danger {
-  color: #333;
-  background: rgba(255, 215, 215, 1);
+  &.danger {
+    color: #333;
+    background: var.$indicator-bg-color-danger;
+  }
 }
 .cell {
   width: 26px;
   height: 26px;
   line-height: 26px;
   text-align: center;
-}
-.cell.danger {
-  border: 1px dashed red;
-  border-radius: 50%;
-  /* color: red; */
+  &.danger {
+    color: red;
+    text-decoration: underline;
+    font-weight: bold;
+  }
 }
 </style>

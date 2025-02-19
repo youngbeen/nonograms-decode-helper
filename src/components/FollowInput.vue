@@ -45,12 +45,14 @@ const submit = () => {
   </div>
 </template>
 
-<style scoped>
+<style lang="scss" scoped>
+@use "../assets/var.scss" as var;
+
 .box-follow-input {
   position: fixed;
   z-index: 3;
   padding: 1rem;
-  border: 1px solid rgb(170, 190, 255);
+  border: 1px solid var.$system-color;
   background: #fff;
 }
 input {

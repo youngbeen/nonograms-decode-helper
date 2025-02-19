@@ -68,12 +68,14 @@ const handleSelect = (key) => {
   </div>
 </template>
 
-<style scoped>
+<style lang="scss" scoped>
+@use "../assets/var.scss" as var;
+
 .box-follow-menu {
   position: fixed;
   z-index: 11;
   padding: 4px;
-  border: 1px solid rgb(170, 190, 255);
+  border: 1px solid var.$system-color;
   background: rgba(255, 255, 255, 1);
   color: #333;
   font-size: 12px;
@@ -88,12 +90,11 @@ const handleSelect = (key) => {
   cursor: default;
 }
 .menu-item:hover {
-  background: rgb(170, 190, 255);
+  background: var.$system-color;
 }
 .icon {
   margin-right: 4px;
   width: 20px;
   height: 20px;
-  /* color: rgb(170, 190, 255); */
 }
 </style>

@@ -46,12 +46,14 @@ onBeforeUnmount(() => {
   </div>
 </template>
 
-<style scoped>
+<style lang="scss" scoped>
+@use "../assets/var.scss" as var;
+
 .box-follow-indicator {
   position: fixed;
   z-index: 2;
   padding: 4px;
-  border: 1px solid rgb(170, 190, 255);
+  border: 1px solid var.$system-color;
   background: rgba(255, 255, 255, 0.9);
   color: #666;
   font-size: 12px;
@@ -59,7 +61,7 @@ onBeforeUnmount(() => {
 .icon {
   width: 20px;
   height: 20px;
-  color: rgb(170, 190, 255);
+  color: var.$system-color;
 }
 .side-content {
   display: flex;
