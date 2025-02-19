@@ -4,7 +4,7 @@ import { useRoute } from 'vue-router'
 import { clipboard } from '@youngbeen/angle-ctrl'
 import eventBus from '@/EventBus'
 import demoData from '@/demo/demoData'
-import { initMap, resolveBlock, resolveEdge, resolveMaxNumber, resolveSideExactMarkedPiece, resolveSmallSideSpace, resolveLonelyNumber, resolveSplitMarkedPieces, resolveMarkedOrCrossed, mnQuantaResolve, checkAnswerSheet, getLineSum } from '@/utils/core'
+import { initMap, resolveBlock, resolveEdge, resolveMaxNumber, resolveSideExactMarkedPiece, resolveSmallSideSpace, resolveSmallSpace, resolveLonelyNumber, resolveSplitMarkedPieces, resolveMarkedOrCrossed, mnQuantaResolve, checkAnswerSheet, getLineSum } from '@/utils/core'
 import { addToStorage, clearStorage, getStorageByOffset, saveCopy, getSavedCopy, savePreset, getPreset } from '@/utils/storage'
 import FollowMenu from './FollowMenu.vue'
 import FollowInput from './FollowInput.vue'
@@ -542,6 +542,16 @@ const resolveBySmallSideSpace = (noSave = false) => {
     versionOffset.value = 0
   }
 }
+const resolveBySmallSpace = (noSave = false) => {
+  resolveSmallSpace(puz, answerMap.data).forEach(a => {
+    answerMap.data[a.y][a.x] = a.value
+  })
+  if (!noSave) {
+    const res = addToStorage(answerMap.data, versionOffset.value)
+    versionCount.value = res.length
+    versionOffset.value = 0
+  }
+}
 const resolveByLonelyNumber = (noSave = false) => {
   resolveLonelyNumber(puz, answerMap.data).forEach(a => {
     answerMap.data[a.y][a.x] = a.value
@@ -725,6 +735,7 @@ const standardResolve = () => {
   resolveBySideExactMarkedPiece(true)
   resolveBySplitMarkedPieces(true)
   resolveBySmallSideSpace(true)
+  resolveBySmallSpace(true)
   resolveByLonelyNumber(true)
   resolveByMarkedOrCrossed(true)
   checkAnswerSheet(puz, answerMap.data)
@@ -896,6 +907,7 @@ const handleDragEnd = (e) => {
       <button v-show="debug" @click="resolveBySideExactMarkedPiece">Resolve By Side Exact Marked Piece</button>
       <button v-show="debug" @click="resolveBySplitMarkedPieces">Resolve By Split Marked Pieces</button>
       <button v-show="debug" @click="resolveBySmallSideSpace">Resolve By Small Side Space</button>
+      <button v-show="debug" @click="resolveBySmallSpace">Resolve By Small Space</button>
       <button v-show="debug" @click="resolveByLonelyNumber">Resolve By Lonely Number</button>
       <button v-show="debug" @click="resolveByMarkedOrCrossed">Resolve By Marked/Crossed</button>
       <button @click="resolveByMn">m**n Resolve({{ estTime }})</button>

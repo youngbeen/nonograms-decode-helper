@@ -638,6 +638,57 @@ export const resolveSmallSideSpace = (puz, answer) => {
   return result
 }
 
+// 方法根据还未填充完成的空间大小，比对最小的未解决数字，如果空间不够填充最小的未解决数字，则此空间中的全部格子都应该是cross
+export const resolveSmallSpace = (puz, answer) => {
+  const result = [
+    // {
+    //   x: 0,
+    //   y: 0,
+    //   value: '1|0'
+    // }
+  ]
+  const processLine = (direction, lines, answer) => {
+    lines.forEach((line, index) => {
+      // line is like [4, 1, 2]
+      if (!isLineClear(direction, answer, index)) {
+        const lineInfo = getLineInfo(direction, answer, index)
+        const puzInfo = getPuzLineInfo(line)
+        let minUnresolvedNumber = puzInfo.numberInfo[0].number
+        for (let j = 0; j < puzInfo.numberInfo.length; j++) {
+          // 从目前最小的数字找起，如果全部找到明确的marked块，则继续找下一个
+          const item = puzInfo.numberInfo[j]
+          let exactCount = 0
+          lineInfo.markedPieces.forEach(p => {
+            if (p.resolved && p.length === item.number) {
+              exactCount++
+            }
+          })
+          if (exactCount < item.count) {
+            // 当前最小数字未找全所有明确的块
+            minUnresolvedNumber = item.number
+            break
+          }
+        }
+        // 检查所有未填充完成的空间，如果空间大小比目前最小数字还小，则此空间中全部应该填充cross
+        lineInfo.spaces.forEach(s => {
+          if (!s.filled && s.length < minUnresolvedNumber) {
+            for (let k = s.fromIndex; k <= s.toIndex; k++) {
+              result.push({
+                x: direction === 'row' ? k : index,
+                y: direction === 'row' ? index : k,
+                value: '0'
+              })
+            }
+          }
+        })
+      }
+    })
+  }
+  processLine('row', puz.left, answer)
+  processLine('column', puz.top, answer)
+  return result
+}
+
 // 只有一个数字，将所有之间的未知项连起来，最后处理左右余数之外的全部标cross
 export const resolveLonelyNumber = (puz, answer) => {
   const width = puz.top.length
