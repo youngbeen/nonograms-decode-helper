@@ -1239,19 +1239,19 @@ const handleDragEnd = (e) => {
           }
         }
       }
-    }
-    &:nth-of-type(5n) > .row-box {
-      position: relative;
-      /* top: 2px; */
-      /* border-bottom: 1px solid red; */
-      &:after {
-        content: "";
-        position: absolute;
-        width: 100%;
-        height: 2px;
-        bottom: -2px;
-        left: 0;
-        background: #999;
+      &:nth-of-type(5n) > .row-box {
+        position: relative;
+        /* top: 2px; */
+        /* border-bottom: 1px solid red; */
+        &:after {
+          content: "";
+          position: absolute;
+          width: 100%;
+          height: 2px;
+          bottom: -2px;
+          left: 0;
+          background: #999;
+        }
       }
     }
   }
