@@ -639,48 +639,193 @@ export const resolveSmallSideSpace = (puz, answer) => {
 }
 
 // 方法根据还未填充完成的空间大小，比对最小的未解决数字，如果空间不够填充最小的未解决数字，则此空间中的全部格子都应该是cross
+// 方法还根据假如当前只剩一个未解决的marked块，将其不在的未填充空间全部标记cross，另外对其左右延展边缘之外的区域进行cross标记
+// 方法还根据当前未解决明确的最大数字个数，寻找未填充完成的空间里面能放置下最大数字且不能放置下2个最大数字的空间个数，如果满足放置条件的空间个数小于等于当前未明确的最大数字个数，则说明这些满足放置条件的空间中都有一个此最大数字
 export const resolveSmallSpace = (puz, answer) => {
-  const result = [
+  let result = [
     // {
     //   x: 0,
     //   y: 0,
     //   value: '1|0'
     // }
   ]
-  const processLine = (direction, lines, answer) => {
-    lines.forEach((line, index) => {
-      // line is like [4, 1, 2]
-      if (!isLineClear(direction, answer, index)) {
-        const lineInfo = getLineInfo(direction, answer, index)
-        const puzInfo = getPuzLineInfo(line)
-        let minUnresolvedNumber = puzInfo.numberInfo[0].number
-        for (let j = 0; j < puzInfo.numberInfo.length; j++) {
-          // 从目前最小的数字找起，如果全部找到明确的marked块，则继续找下一个
-          const item = puzInfo.numberInfo[j]
-          let exactCount = 0
-          lineInfo.markedPieces.forEach(p => {
-            if (p.resolved && p.length === item.number) {
-              exactCount++
-            }
+  // 方法根据还未填充完成的空间大小，比对最小的未解决数字，如果空间不够填充最小的未解决数字，则此空间中的全部格子都应该是cross
+  const inspectMethod1 = (direction, index, puzInfo, lineInfo) => {
+    const partResult = []
+    let minUnresolvedNumber = puzInfo.numberInfo[0].number
+    for (let j = 0; j < puzInfo.numberInfo.length; j++) {
+      // 从目前最小的数字找起，如果全部找到明确的marked块，则继续找下一个
+      const item = puzInfo.numberInfo[j]
+      let exactCount = 0
+      lineInfo.markedPieces.forEach(p => {
+        if (p.resolved && p.length === item.number) {
+          exactCount++
+        }
+      })
+      if (exactCount < item.count) {
+        // 当前最小数字未找全所有明确的块
+        minUnresolvedNumber = item.number
+        break
+      }
+    }
+    // 检查所有未填充完成的空间，如果空间大小比目前最小数字还小，则此空间中全部应该填充cross
+    lineInfo.spaces.forEach(s => {
+      if (!s.filled && s.length < minUnresolvedNumber) {
+        for (let k = s.fromIndex; k <= s.toIndex; k++) {
+          partResult.push({
+            x: direction === 'row' ? k : index,
+            y: direction === 'row' ? index : k,
+            value: '0'
           })
-          if (exactCount < item.count) {
-            // 当前最小数字未找全所有明确的块
-            minUnresolvedNumber = item.number
-            break
+        }
+      }
+    })
+    return partResult
+  }
+  // 方法根据假如当前只剩一个未解决的marked块，将其不在的未填充空间全部标记cross，另外对其左右延展边缘之外的区域进行cross标记
+  const inspectMethod2 = (direction, index, puzInfo, lineInfo) => {
+    const partResult = []
+    let unresolvedMarkedPieceCount = 0
+    let lastUnresolvedMarkedPiece = null
+    const toResolveNumber = puzInfo.numberInfo.map(item => {
+      return {
+        number: item.number,
+        leftCount: item.count
+      }
+    })
+    lineInfo.markedPieces.forEach(p => {
+      if (p.resolved) {
+        // 已解决的marked块，处理待处理的统计数据
+        const targetIndex = toResolveNumber.findIndex(t => t.number === p.length)
+        if (targetIndex > -1) {
+          const toResolveItem = toResolveNumber[targetIndex]
+          toResolveItem.leftCount--
+          if (toResolveItem.leftCount <= 0) {
+            toResolveNumber.splice(targetIndex, 1)
           }
         }
-        // 检查所有未填充完成的空间，如果空间大小比目前最小数字还小，则此空间中全部应该填充cross
-        lineInfo.spaces.forEach(s => {
-          if (!s.filled && s.length < minUnresolvedNumber) {
+      } else {
+        unresolvedMarkedPieceCount++
+        lastUnresolvedMarkedPiece = p
+      }
+    })
+    if (unresolvedMarkedPieceCount === 1 && toResolveNumber.length === 1 && toResolveNumber[0].leftCount === 1) {
+      // 未解决的marked块只剩1个，且待解决的marked块只剩1个
+      const lastNumber = toResolveNumber[0].number
+      const exactLength = lastUnresolvedMarkedPiece.length
+      const unknownLength = lastNumber - exactLength
+      // 根据目前已经明确的，确定左右的极限位置
+      const preBoundIndex = lastUnresolvedMarkedPiece.fromIndex - unknownLength
+      const sufBoundIndex = lastUnresolvedMarkedPiece.toIndex + unknownLength
+      lineInfo.spaces.forEach(s => {
+        if (!s.filled) {
+          if (lastUnresolvedMarkedPiece.fromIndex >= s.fromIndex && lastUnresolvedMarkedPiece.toIndex <= s.toIndex) {
+            // 未解决的marked块所处的空间
+            // 计算左右的侵入空间大小，从而确定右左应该补充marked的空间
+            let preEncroachLength = s.fromIndex - preBoundIndex
+            let sufEncroachLength = sufBoundIndex - s.toIndex
+            // 左右侵入空间的长度，如果小于0，则表示没有侵入空间
+            preEncroachLength = preEncroachLength > 0 ? preEncroachLength : 0
+            sufEncroachLength = sufEncroachLength > 0 ? sufEncroachLength : 0
             for (let k = s.fromIndex; k <= s.toIndex; k++) {
-              result.push({
+              if (k < preBoundIndex || k > sufBoundIndex) {
+                // 已经明确的格子左右延展的极限边缘之外的格子，必定是cross
+                partResult.push({
+                  x: direction === 'row' ? k : index,
+                  y: direction === 'row' ? index : k,
+                  value: '0'
+                })
+              } else if (k > lastUnresolvedMarkedPiece.toIndex && k <= lastUnresolvedMarkedPiece.toIndex + preEncroachLength) {
+                // 未解决的marked块右侧的侵入空间，全部标记marked
+                partResult.push({
+                  x: direction === 'row' ? k : index,
+                  y: direction === 'row' ? index : k,
+                  value: '1'
+                })
+              } else if (k >= lastUnresolvedMarkedPiece.fromIndex - sufEncroachLength && k < lastUnresolvedMarkedPiece.fromIndex) {
+                // 未解决的marked块左侧的侵入空间，全部标记marked
+                partResult.push({
+                  x: direction === 'row' ? k : index,
+                  y: direction === 'row' ? index : k,
+                  value: '1'
+                })
+              }
+            }
+          } else {
+            // 未解决的marked块不在的空间，全部标记cross
+            for (let k = s.fromIndex; k <= s.toIndex; k++) {
+              partResult.push({
                 x: direction === 'row' ? k : index,
                 y: direction === 'row' ? index : k,
                 value: '0'
               })
             }
           }
-        })
+        }
+      })
+    }
+    return partResult
+  }
+  // 方法根据当前未解决明确的最大数字个数，寻找未填充完成的空间里面能放置下最大数字且不能放置下2个最大数字的空间个数，如果满足放置条件的空间个数小于等于当前未明确的最大数字个数，则说明这些满足放置条件的空间中都有一个此最大数字
+  const inspectMethod3 = (direction, index, puzInfo, lineInfo) => {
+    const partResult = []
+    // 先确定目前未解决的明确的最大数字信息
+    const toResolveNumber = puzInfo.numberInfo.map(item => {
+      return {
+        number: item.number,
+        leftCount: item.count
+      }
+    })
+    lineInfo.markedPieces.forEach(p => {
+      if (p.resolved) {
+        // 已解决的marked块，处理待处理的统计数据
+        const targetIndex = toResolveNumber.findIndex(t => t.number === p.length)
+        if (targetIndex > -1) {
+          const toResolveItem = toResolveNumber[targetIndex]
+          toResolveItem.leftCount--
+          if (toResolveItem.leftCount <= 0) {
+            toResolveNumber.splice(targetIndex, 1)
+          }
+        }
+      }
+    })
+    if (toResolveNumber.length) {
+      const maxToResolveNumber = toResolveNumber[toResolveNumber.length - 1]
+      if (lineInfo.spaces.find(s => !s.filled && s.length > 2 * maxToResolveNumber.number)) {
+        // 当前有存在一个能放多个最大数字的空间，可能性太多，放弃此算法
+      } else {
+        // 再确定目前符合条件的空间信息
+        const validSpaces = lineInfo.spaces.filter((s) => !s.filled && s.length >= maxToResolveNumber.number && s.length < 2 * maxToResolveNumber.number + 1)
+        if (validSpaces.length <= maxToResolveNumber.leftCount) {
+          // 符合条件的空间个数小于等于当前未明确的最大数字个数，则说明这些满足放置条件的空间中都有一个此最大数字
+          validSpaces.forEach(s => {
+            const notSureLength = s.length - maxToResolveNumber.number
+            const sureLength = maxToResolveNumber.number - notSureLength
+            if (sureLength > 0) {
+              for (let k = 0; k < sureLength; k++) {
+                partResult.push({
+                  x: direction === 'row' ? s.fromIndex + notSureLength + k : index,
+                  y: direction === 'row' ? index : s.fromIndex + notSureLength + k,
+                  value: '1'
+                })
+              }
+            }
+          })
+        }
+      }
+    }
+    return partResult
+  }
+  const processLine = (direction, lines, answer) => {
+    lines.forEach((line, index) => {
+      // line is like [4, 1, 2]
+      if (!isLineClear(direction, answer, index)) {
+        const lineInfo = getLineInfo(direction, answer, index)
+        const puzInfo = getPuzLineInfo(line)
+        const r1 = inspectMethod1(direction, index, puzInfo, lineInfo)
+        const r2 = inspectMethod2(direction, index, puzInfo, lineInfo)
+        const r3 = inspectMethod3(direction, index, puzInfo, lineInfo)
+        result = [...result, ...concatAnswers([...r1, ...r2, ...r3])]
       }
     })
   }
@@ -1285,6 +1430,25 @@ const getLineSideCrossedCount = (direction, answer, index) => {
     preCrossedCount,
     sufCrossedCount
   }
+}
+
+// 整合所有的answer，剔除重复项
+const concatAnswers = (raw) => {
+  // {
+  //   x: 0,
+  //   y: 0,
+  //   value: '1|0'
+  // }
+  const exists = [] // 存储格式为`${x}-${y}`，从而确保判断重复很方便
+  const fixed = []
+  raw.forEach(item => {
+    const key = `${item.x}-${item.y}`
+    if (exists.indexOf(key) === -1) {
+      exists.push(key)
+      fixed.push(item)
+    }
+  })
+  return fixed
 }
 
 export const checkAnswerSheet = (puz, answer) => {
