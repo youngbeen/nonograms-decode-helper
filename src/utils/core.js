@@ -1480,6 +1480,59 @@ export const checkAnswerSheet = (puz, answer) => {
   checkLine('column', puz.top, answer)
 }
 
+export const compareHumanAndAi = (humanAnswer, aiAnswer) => {
+  const result = {
+    aiFaults: [ // ai推理错误的结果，即人工和AI都有推理结果，但是AI推理错误
+      // {
+      //   rowIndex: 0,
+      //   colIndex: 0,
+      //   aiValue: '1'
+      // }
+    ],
+    aiPros: [ // ai推理出结果，人工未推理出
+      // {
+      //   rowIndex: 0,
+      //   colIndex: 0,
+      //   aiValue: '1'
+      // }
+    ],
+    aiCons: [ // ai未推理出结果，人工推理出
+      // {
+      //   rowIndex: 0,
+      //   colIndex: 0,
+      //   humanValue: '1'
+      // }
+    ]
+  }
+  humanAnswer.forEach((row, i) => {
+    row.forEach((cell, j) => {
+      const aiCell = aiAnswer[i][j]
+      if (cell !== aiCell) {
+        if (cell && aiCell) {
+          result.aiFaults.push({
+            rowIndex: i,
+            colIndex: j,
+            aiValue: aiCell
+          })
+        } else if (cell) {
+          result.aiCons.push({
+            rowIndex: i,
+            colIndex: j,
+            humanValue: cell
+          })
+        } else if (aiCell) {
+          result.aiPros.push({
+            rowIndex: i,
+            colIndex: j,
+            aiValue: aiCell
+          })
+        }
+      }
+    })
+  })
+  return result
+}
+
 export const initMap = (width, height) => {
   const result = []
   for (let index = 0; index < height; index++) {

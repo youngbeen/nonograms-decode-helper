@@ -51,7 +51,7 @@ onBeforeUnmount(() => {
 
 .box-follow-indicator {
   position: fixed;
-  z-index: 2;
+  z-index: 3;
   padding: 4px;
   border: 1px solid var.$system-color;
   background: rgba(255, 255, 255, 0.9);

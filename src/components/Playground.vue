@@ -4,13 +4,15 @@ import { useRoute } from 'vue-router'
 import { clipboard } from '@youngbeen/angle-ctrl'
 import eventBus from '@/EventBus'
 import demoData from '@/demo/demoData'
-import { initMap, resolveBlock, resolveEdge, resolveMaxNumber, resolveSideExactMarkedPiece, resolveSmallSideSpace, resolveSmallSpace, resolveLonelyNumber, resolveSplitMarkedPieces, resolveMarkedOrCrossed, mnQuantaResolve, checkAnswerSheet, getLineSum } from '@/utils/core'
+import { initMap, resolveBlock, resolveEdge, resolveMaxNumber, resolveSideExactMarkedPiece, resolveSmallSideSpace, resolveSmallSpace, resolveLonelyNumber, resolveSplitMarkedPieces, resolveMarkedOrCrossed, mnQuantaResolve, checkAnswerSheet, getLineSum, compareHumanAndAi } from '@/utils/core'
+import { aiSolve } from '@/utils/ai'
 import { addToStorage, clearStorage, getStorageByOffset, saveCopy, getSavedCopy, savePreset, getPreset } from '@/utils/storage'
 import FollowMenu from './FollowMenu.vue'
 import FollowInput from './FollowInput.vue'
 import FollowIndicator from './FollowIndicator.vue'
 import FlyTopIndicator from './FlyTopIndicator.vue'
 import InputAssist from './InputAssist.vue'
+import AiLegend from './AiLegend.vue'
 // const debounce = (fn, ms = 0) => {
 //   let timeoutId
 //   return function (...args) {
@@ -25,6 +27,13 @@ let status = ref('init') // init | resolving
 const answerMap = reactive({
   data: [
     // ['1|0|<blank>']
+  ],
+  aiPros: [ // AI推理出的新结果，提示观测用
+    // {
+    //   rowIndex: 0, // 即y
+    //   colIndex: 0, // 即x
+    //   aiValue: '1'
+    // }
   ]
 })
 let isTopNumbersShow = ref(true)
@@ -134,6 +143,12 @@ const listenKeyStroke = (event) => {
       // 输入状态下r键重复上一次输入
       e.preventDefault()
       repeatLastInput()
+    }
+  }
+  if (status.value === 'resolving') {
+    if (e.keyCode === 65) {
+      // 侦听a按键
+      acceptAiResolve()
     }
   }
 }
@@ -729,6 +744,8 @@ const redoChange = () => {
 }
 const standardResolve = () => {
   const countBeforeResolve = resolveInfo.value.resolved
+  // 先使用AI单独尝试推理
+  const aiResult = aiSolve(puz, answerMap.data)
   resolveByBlock(true)
   resolveByEdge(true)
   resolveByMaxNumber(true)
@@ -739,6 +756,13 @@ const standardResolve = () => {
   resolveByLonelyNumber(true)
   resolveByMarkedOrCrossed(true)
   checkAnswerSheet(puz, answerMap.data)
+  const compareResult = compareHumanAndAi(answerMap.data, aiResult)
+  console.log('人工推理vsAI推理结果', compareResult)
+  if (compareResult && compareResult.aiPros) {
+    answerMap.aiPros = compareResult.aiPros
+  } else {
+    answerMap.aiPros = []
+  }
   const res = addToStorage(answerMap.data, versionOffset.value)
   versionCount.value = res.length
   versionOffset.value = 0
@@ -746,6 +770,18 @@ const standardResolve = () => {
     console.log('有新解决的cell，自动重复调用resolve')
     standardResolve()
   }
+}
+const acceptAiResolve = () => {
+  if (!answerMap.aiPros.length) {
+    return
+  }
+  answerMap.aiPros.forEach(r => {
+    answerMap.data[r.rowIndex][r.colIndex] = r.aiValue
+  })
+  answerMap.aiPros = []
+  const res = addToStorage(answerMap.data, versionOffset.value)
+  versionCount.value = res.length
+  versionOffset.value = 0
 }
 const save = () => {
   // const name = window.prompt('Give a name for your save data...')
@@ -901,6 +937,7 @@ const handleDragEnd = (e) => {
     </p>
     <p class="action-seg" v-show="status === 'resolving'">
       <button @click="standardResolve">Resolve(R / blank space)</button>
+      <button v-show="answerMap.aiPros.length" @click="acceptAiResolve()">Accept AI Resolve(a)</button>
       <button v-show="debug" @click="resolveByBlock">Resolve By Blocks</button>
       <button v-show="debug" @click="resolveByEdge">Resolve By Edge</button>
       <button v-show="debug" @click="resolveByMaxNumber">Resolve By Max Number</button>
@@ -997,7 +1034,10 @@ const handleDragEnd = (e) => {
           v-for="(r, index) in answerMap.data" :key="index">
           <div class="row-box">
             <div class="clk-cell"
-              :class="['style-' + c]"
+              :class="[
+                'style-' + c,
+                !c && answerMap.aiPros.find(item => item.rowIndex === index && item.colIndex === ci) ? 'style-possible-' + answerMap.aiPros.find(item => item.rowIndex === index && item.colIndex === ci).aiValue : ''
+              ]"
               v-for="(c, ci) in r" :key="ci"
               @mouseover="handleMouseOverCell($event, index, ci)"
               @mouseout="handleMouseOutCell()"
@@ -1009,11 +1049,12 @@ const handleDragEnd = (e) => {
     </div>
   </div>
 
-  <follow-menu></follow-menu>
-
-  <follow-input></follow-input>
+  <ai-legend
+    v-show="answerMap.aiPros && answerMap.aiPros.length"></ai-legend>
 
   <follow-indicator></follow-indicator>
+
+  <follow-input></follow-input>
 
   <fly-top-indicator
     :is-show="!isTopNumbersShow && focusColPuz"
@@ -1021,6 +1062,8 @@ const handleDragEnd = (e) => {
     :is-danger="answerMapCalc.top && answerMapCalc.top.length && focusColPuz && focusColPuz.length < answerMapCalc.top[focusColIndex].length"
     :answer-map-calc="answerMapCalc"
     :data="focusColPuz"></fly-top-indicator>
+
+  <follow-menu></follow-menu>
 
   <input-assist
     :menu="lastInput.history"></input-assist>
@@ -1220,9 +1263,33 @@ const handleDragEnd = (e) => {
             box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2); /* 添加阴影，增加立体感 */
             /* box-shadow: -2px -2px 5px #fff, 2px 2px 5px #babecc; */
           }
+          &.style-possible-1 {
+            background: radial-gradient(circle at center, thinkblue.$theme-color-highlight, thinkblue.$theme-color);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2); /* 添加阴影，增加立体感 */
+            /* box-shadow: -2px -2px 5px #fff, 2px 2px 5px #babecc; */
+            animation: blink infinite 1s linear;
+          }
           &.style-0 {
             background: rgb(240, 240, 240);
             box-shadow: inset 1px 1px 2px #babecc, inset -1px -1px 2px #fff;
+            &:before {
+              content: "×";
+              position: absolute;
+              left: 0;
+              top: 0;
+              right: 0;
+              bottom: 0;
+              z-index: 1;
+              line-height: 24px;
+              color: rgb(185, 185, 185);
+              font-size: 28px;
+              text-align: center;
+            }
+          }
+          &.style-possible-0 {
+            background: rgb(240, 240, 240);
+            box-shadow: inset 1px 1px 2px #babecc, inset -1px -1px 2px #fff;
+            animation: blink infinite 1s linear;
             &:before {
               content: "×";
               position: absolute;
@@ -1308,6 +1375,17 @@ const handleDragEnd = (e) => {
         }
       }
     }
+  }
+}
+@keyframes blink {
+  0% {
+    opacity: 0.8;
+  }
+  50% {
+    opacity: 0.3;
+  }
+  100% {
+    opacity: 0.8;
   }
 }
 </style>
