@@ -50,7 +50,7 @@ const submit = () => {
 
 .box-follow-input {
   position: fixed;
-  z-index: 3;
+  z-index: 13;
   padding: 1rem;
   border: 1px solid var.$system-color;
   background: #fff;

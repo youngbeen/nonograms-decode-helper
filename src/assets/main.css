@@ -35,6 +35,12 @@
 } */
 
 /* 公共样式 */
+.cs-pop-title {
+  margin-bottom: 8px;
+  color: #333;
+  font-size: 16px;
+  font-weight: 500;
+}
 .cs-tip {
   display: inline-block;
   padding: 6px 12px;

@@ -1,11 +1,13 @@
 <script setup>
 import { ref, reactive, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
+import { createWorker } from 'tesseract.js'
 import { clipboard } from '@youngbeen/angle-ctrl'
 import eventBus from '@/EventBus'
 import demoData from '@/demo/demoData'
 import { initMap, resolveBlock, resolveEdge, resolveMaxNumber, resolveSideExactMarkedPiece, resolveSmallSideSpace, resolveSmallSpace, resolveLonelyNumber, resolveSplitMarkedPieces, resolveMarkedOrCrossed, mnQuantaResolve, checkAnswerSheet, getLineSum, compareHumanAndAi } from '@/utils/core'
 import { aiSolve } from '@/utils/ai'
+import { optimizeImage } from '@/utils/image'
 import { addToStorage, clearStorage, getStorageByOffset, saveCopy, getSavedCopy, savePreset, getPreset } from '@/utils/storage'
 import FollowMenu from './FollowMenu.vue'
 import FollowInput from './FollowInput.vue'
@@ -13,6 +15,7 @@ import FollowIndicator from './FollowIndicator.vue'
 import FlyTopIndicator from './FlyTopIndicator.vue'
 import InputAssist from './InputAssist.vue'
 import AiLegend from './AiLegend.vue'
+import OcrResult from './OcrResult.vue'
 // const debounce = (fn, ms = 0) => {
 //   let timeoutId
 //   return function (...args) {
@@ -49,6 +52,8 @@ let lastInput = reactive({
   position: 'left',
   history: []
 })
+let ocrLocation = ref('')
+let ocrSize = ref(0)
 let puz = reactive({
   top: [
     // [1, 2], ...
@@ -126,10 +131,25 @@ onMounted(() => {
     panelPositionSave.left = userPreset.panelPositionSave.left
     panelPositionSave.top = userPreset.panelPositionSave.top
   }
+  eventBus.on('ocrInput', ({ location, size }) => {
+    // console.log('should ocr', location)
+    ocrLocation.value = location
+    ocrSize.value = size
+    handleLoadOcr()
+  })
+  eventBus.on('confirmOcrResult', (data) => {
+    // 将数据转换为数字格式
+    data.result = data.result.map(row => {
+      return row.map(c => parseInt(c, 10))
+    })
+    puz[data.location] = data.result
+  })
   window.addEventListener('scroll', checkTopNumberScrollOut)
   window.addEventListener('keydown', listenKeyStroke)
 })
 onUnmounted(() => {
+  eventBus.off('ocrInput')
+  eventBus.off('confirmOcrResult')
   window.removeEventListener('scroll', checkTopNumberScrollOut)
   window.removeEventListener('keydown', listenKeyStroke)
 })
@@ -327,25 +347,156 @@ const checkInputValid = (val) => {
   }
   return true
 }
-// const handleLoadOcr = () => {
-//   const event = document.createEvent('MouseEvents')
-//   event.initMouseEvent('click', false, false)
-//   document.querySelector('#ocr-file-upload').dispatchEvent(event)
-// }
+const handleLoadOcr = () => {
+  document.querySelector('#ocr-file-upload').value = null
+  const event = document.createEvent('MouseEvents')
+  event.initMouseEvent('click', false, false)
+  document.querySelector('#ocr-file-upload').dispatchEvent(event)
+}
 const handleFileChange = (event) => {
   const files = event.target.files
   const postFiles = Array.prototype.slice.call(files)
   if (postFiles.length === 0) {
     return
   }
-  // ocrLoad(postFiles[0])
+  ocrLoad(postFiles[0])
 }
-// const ocrLoad = async (image) => {
-//   const worker = await window.Tesseract.createWorker('eng')
-//   const ret = await worker.recognize(image)
-//   console.log(ret.data.text)
-//   await worker.terminate()
-// }
+const ocrLoad = (image) => {
+  // 先预处理图片
+  const reader = new FileReader()
+  reader.onload = (e) => {
+    // e.target.result 是DataURL
+    const imageUrl = e.target.result
+    // 创建Image对象
+    const newImage = new Image()
+    newImage.src = imageUrl
+    // 等待图片加载完成后处理
+    newImage.onload = async () => {
+      const fixedImage = preprocessImage(newImage)
+      console.log('fixedImage', fixedImage)
+      if (ocrLocation.value === 'top') {
+        // 顶部的数字是竖向的，行级扫描识别会丢失位置信息，切分为竖列N个小图块识别可以保证同一列数字不丢失
+        const mainImage = new Image()
+        mainImage.src = fixedImage
+        mainImage.onload = async (e) => {
+          const worker = await createWorker('eng', 1, {
+            corePath: '/nonograms-decode/',
+            workerPath: '/nonograms-decode/worker.min.js'
+          })
+          await worker.setParameters({
+            tessedit_char_whitelist: '0123456789',
+            // preserve_interword_spaces: '1',
+            // tessedit_pageseg_mode: '5'
+          })
+          const choppedImages = chopImage(mainImage, ocrSize.value, 'vertical')
+          console.log('choppedImages', choppedImages)
+          const rets = await Promise.all(choppedImages.map(async c => {
+            const ret = await worker.recognize(c)
+            return ret.data.text
+          }))
+          // console.log('rets', rets)
+          afterOcr(rets, imageUrl, choppedImages)
+          await worker.terminate()
+        }
+      } else {
+        // 左侧以一个整体逐行识别，准确率高
+        const worker = await createWorker('eng', 1, {
+          corePath: '/nonograms-decode/',
+          workerPath: '/nonograms-decode/worker.min.js'
+        })
+        await worker.setParameters({
+          tessedit_char_whitelist: '0123456789',
+          // preserve_interword_spaces: '1',
+          // tessedit_pageseg_mode: '5'
+        })
+        const ret = await worker.recognize(fixedImage)
+        // console.log(ret.data.text)
+        afterOcr(ret.data.text, imageUrl, fixedImage)
+        await worker.terminate()
+      }
+    }
+  }
+  reader.readAsDataURL(image)
+}
+const preprocessImage = (image) => {
+  const canvas = document.querySelector('#ocr-canvas')
+  const ctx = canvas.getContext('2d', {
+    willReadFrequently: true
+  })
+  // 设置Canvas的尺寸与图片一致
+  canvas.width = image.width
+  canvas.height = image.height
+  ctx.drawImage(image, 0, 0)
+  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
+  optimizeImage(imageData)
+
+  ctx.putImageData(imageData, 0, 0)
+  return canvas.toDataURL()
+}
+const chopImage = (mainImage, segCount, direction) => {
+  const canvas = document.querySelector('#ocr-canvas')
+  const ctx = canvas.getContext('2d', {
+    willReadFrequently: true
+  })
+  const mainImageWidth = mainImage.width
+  const mainImageHeight = mainImage.height
+  let result = []
+  if (direction === 'vertical') {
+    // 竖向切割
+    const chopWidth = mainImageWidth / segCount
+    // 设置Canvas的尺寸与图片一致
+    canvas.width = chopWidth
+    canvas.height = mainImageHeight
+    for (let i = 0; i < segCount; i++) {
+      ctx.drawImage(mainImage, i * chopWidth, 0, chopWidth, mainImageHeight, 0, 0, chopWidth, mainImageHeight)
+      result.push(canvas.toDataURL())
+    }
+  } else {
+    // 横向切割
+    const chopHeight = mainImageHeight / segCount
+    // 设置Canvas的尺寸与图片一致
+    canvas.width = mainImageWidth
+    canvas.height = chopHeight
+    for (let i = 0; i < segCount; i++) {
+      ctx.drawImage(mainImage, 0, i * chopHeight, mainImageWidth, chopHeight, 0, 0, mainImageWidth, chopHeight)
+      result.push(canvas.toDataURL())
+    }
+  }
+
+  return result
+}
+const afterOcr = (rawContent, originalImage, fixedImage) => {
+  console.log('OCR数据', rawContent)
+  if (ocrLocation.value === 'top') {
+    // 处理顶部的数字
+    const columns = rawContent.map(r => {
+      if (!r) {
+        return ['0']
+      } else {
+        let ary = r.split('\n')
+        return ary.filter(item => item)
+      }
+    })
+    console.log(columns)
+    eventBus.emit('notifyShowOcrResult', {
+      result: columns,
+      originalImage,
+      fixedImage
+    })
+  } else {
+    // 处理左侧的数字，以行形式存在
+    const rows = rawContent.split('\n')
+    let fixedRows = rows.map(item => item.replace(/\D/g, ''))
+    fixedRows = fixedRows.filter(item => item)
+    fixedRows = fixedRows.map(item => item.split(''))
+    console.log(fixedRows)
+    eventBus.emit('notifyShowOcrResult', {
+      result: fixedRows,
+      originalImage,
+      fixedImage
+    })
+  }
+}
 const loadDemo = (mode) => {
   const data = demoData[mode]
   puz.top = data.top
@@ -931,6 +1082,7 @@ const handleDragEnd = (e) => {
       <button @click="repeatLastInput()">Repeat Last Input(R)</button>
       <!-- <button @click="handleLoadOcr()">OCR (Experimental)</button> -->
       <input id="ocr-file-upload" type="file" name="image" accept=".jpg,.png,.jpeg,.bmp" @change="handleFileChange" style="display: none;" />
+      <canvas id="ocr-canvas" v-show="debug"></canvas>
       <button @click="loadString">Load From String Save</button>
       <button @click="loadDemo('easy')">Load Easy Demo</button>
       <button @click="loadDemo('hard')">Load Hard Demo</button>
@@ -938,7 +1090,7 @@ const handleDragEnd = (e) => {
     <p class="action-seg" v-show="status === 'resolving'">
       <button @click="standardResolve">Resolve(R / blank space)</button>
       <button v-show="answerMap.aiPros.length" @click="acceptAiResolve()">Accept AI Resolve(a)</button>
-      <button v-show="debug" @click="resolveByBlock">Resolve By Blocks</button>
+      <!-- <button v-show="debug" @click="resolveByBlock">Resolve By Blocks</button>
       <button v-show="debug" @click="resolveByEdge">Resolve By Edge</button>
       <button v-show="debug" @click="resolveByMaxNumber">Resolve By Max Number</button>
       <button v-show="debug" @click="resolveBySideExactMarkedPiece">Resolve By Side Exact Marked Piece</button>
@@ -946,7 +1098,7 @@ const handleDragEnd = (e) => {
       <button v-show="debug" @click="resolveBySmallSideSpace">Resolve By Small Side Space</button>
       <button v-show="debug" @click="resolveBySmallSpace">Resolve By Small Space</button>
       <button v-show="debug" @click="resolveByLonelyNumber">Resolve By Lonely Number</button>
-      <button v-show="debug" @click="resolveByMarkedOrCrossed">Resolve By Marked/Crossed</button>
+      <button v-show="debug" @click="resolveByMarkedOrCrossed">Resolve By Marked/Crossed</button> -->
       <button @click="resolveByMn">m**n Resolve({{ estTime }})</button>
     </p>
     <p class="action-seg" v-show="status === 'resolving'">
@@ -1067,6 +1219,11 @@ const handleDragEnd = (e) => {
 
   <input-assist
     :menu="lastInput.history"></input-assist>
+
+  <ocr-result
+    :location="ocrLocation"
+    :width="width"
+    :height="height"></ocr-result>
 </template>
 
 <style lang="scss" scoped>
@@ -1094,7 +1251,7 @@ const handleDragEnd = (e) => {
     height: auto;
   }
   .number-input {
-    min-width: 400px;
+    min-width: 300px;
     height: 30px;
     line-height: 30px;
   }

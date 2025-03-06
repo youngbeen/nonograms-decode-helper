@@ -42,6 +42,16 @@ onBeforeUnmount(() => {
   eventBus.off('notifyHideInputAssist')
 })
 
+const handleLoadOcr = async () => {
+  const size = window.prompt('What size will you OCR?', '20')
+  if (size) {
+    eventBus.emit('ocrInput', {
+      location: tag.value,
+      size: parseInt(size, 10)
+    })
+  }
+}
+
 const handleSelectRepeatContent = (count) => {
   if (!num.value) {
     return
@@ -65,6 +75,9 @@ const handleSelect = (content) => {
   <div class="box-input-assist"
     v-show="isShow"
     :style="{ left: x + 4 + 'px', top: y + 4 + 'px' }">
+    <p style="margin-bottom: 4px;">
+      <button @click="handleLoadOcr()">OCR Image</button>
+    </p>
     <span class="count-cell"
       :class="[hoverIndex >= i - 1 && 'active']"
       @mouseover="hoverIndex = i - 1"
