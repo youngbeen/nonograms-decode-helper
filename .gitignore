@@ -14,6 +14,8 @@ dist-ssr
 coverage
 *.local
 
+public/tesseract*.*
+
 /cypress/videos/
 /cypress/screenshots/
 

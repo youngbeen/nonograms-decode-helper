@@ -56,11 +56,33 @@ Whenever input a puzzle, press `F1`~`F10` will add `1-1`~`2-0` content into curr
 
 ## Notes
 
+### OCR识别方案
+
+目前使用的是tesseract，经过算法调优，左侧识别准确率大概能达到90%以上。上侧的识别准确率稍低，大概能达到75%。
+
+这个OCR识别方案的唯一缺点是使用的依赖比较大，单从网络上下载需要几十M，通过github公网走就更头疼，目前只能在本地环境玩。
+
+因为依赖比较大，使用的时候需要把以下几个文件复制到public目录下方便调用。
+
+```
+tesseract-core-simd-lstm.wasm
+tesseract-core-simd-lstm.wasm.js
+tesseract-core-simd.wasm
+tesseract-core-simd.wasm.js
+tesseract-core.wasm
+tesseract-core.wasm.js
+```
+
+```shell
+# 使用下面的命令
+cp node_modules/tesseract.js-core/tesseract-core-simd-lstm.wasm public/ && cp node_modules/tesseract.js-core/tesseract-core-simd-lstm.wasm.js public/ && cp node_modules/tesseract.js-core/tesseract-core-simd.wasm public/ && cp node_modules/tesseract.js-core/tesseract-core-simd.wasm.js public/ && cp node_modules/tesseract.js-core/tesseract-core.wasm public/ && cp node_modules/tesseract.js-core/tesseract-core.wasm.js public/
+```
+
 ### 快速录入
 
 在识别辅助解谜之前，最重要的工作就是录入谜题。录入复杂的谜题常规情况下会耗费大量时间，且手工录入容易出错。
 
-最优的快速录入方案毋庸置疑是OCR识别，但是目前还未找到纯前端、能脱机运行的、识别成绩及格的OCR产品。所以现实一点，先从事实进行优化。
+最优的快速录入方案毋庸置疑是OCR识别，但目前找到纯前端的OCR方案唯一的缺陷就是依赖大。如果不能跑本地环境，只能现实一点，先从事实进行优化。
 
 录入的内容主要包含数字，分隔。经过分析，快速录入的核心在于如何处理以下关键：
 
@@ -87,6 +109,8 @@ Whenever input a puzzle, press `F1`~`F10` will add `1-1`~`2-0` content into curr
 
 当前的方案是，支持`m*n`录入形式。代表连续n个数字m。例如上述例如可以改为录入`1*6`以及`1*43`。（注意，并不是43个1，因为程序会自动分隔所有数字）
 
+同时，你可以用`ctrl` + `1`~`9` 来快速录入`1*1`~`1*9`。
+
 （这个方案进一步延长了键盘的寿命，太好了）
 
 #### 重复出现相同/相似内容
@@ -97,10 +121,10 @@ Whenever input a puzzle, press `F1`~`F10` will add `1-1`~`2-0` content into curr
 
 #### 夹杂的大数字
 
-不要分隔录入内容简单太棒了，但是要怎么录入大数字？录入的大数字会被自动分隔为多个单数字！
+不要分隔录入内容简直太棒了，但是要怎么录入大数字？录入的大数字会被自动分隔为多个单数字！
 
 假如要录入的是`1 12 1 3`，录入`11213`会被自动拆分为`1 1 2 1 3`。要怎么把1和2连起来？
 
 当前设计的最基础的方案是使用`m-n`形式，代表mn是一个连续的数字。上述例子可以录入`11-213`。（好像还不错，但是感觉还是有些麻烦）
 
-对于常用的11~20这些大数字，可以通过`F1~F10`按键快速录入`1-1`~`2-0`这样的内容到录入框。10可以通过`a`按键快速录入`1-0`内容。
+对于常用的10~19这些大数字，可以通过`alt`+`0`之类的数字快速录入`1-0`~`1-9`这样的内容到录入框。
