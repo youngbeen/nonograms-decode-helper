@@ -102,7 +102,8 @@ const close = () => {
         <div class="row-box"
           v-for="(r, ri) in ocrResult.result" :key="ri">
           <div class="row"
-            :data-index="ri + 1">
+            :data-index="ri + 1"
+            @dblclick="handleEdit(ri, $event)">
             <div class="cell"
               :class="[parseInt(c) > possibleMaxSize && 'warning-cell']"
               v-for="(c, ci) in r" :key="ci">
@@ -124,7 +125,8 @@ const close = () => {
         <div class="col-box"
           v-for="(r, ri) in ocrResult.result" :key="ri">
           <div class="col"
-            :data-index="ri + 1">
+            :data-index="ri + 1"
+            @dblclick="handleEdit(ri, $event)">
             <div class="cell"
               :class="[parseInt(c) > possibleMaxSize && 'warning-cell']"
               v-for="(c, ci) in r" :key="ci">
@@ -210,15 +212,16 @@ const close = () => {
       .row {
         position: relative;
         display: flex;
-        justify-content: center;
-        min-width: 400px;
+        justify-content: flex-end;
+        min-width: 360px;
         padding: 4px 16px;
         border: 1px solid var.$border-color;
         &:before {
           position: absolute;
           left: 0;
-          top: 2px;
+          top: 4px;
           height: 28px;
+          line-height: 28px;
           content: attr(data-index);
           color: #ccc;
           font-size: 12px;

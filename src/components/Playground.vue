@@ -489,6 +489,27 @@ const afterOcr = (rawContent, originalImage, fixedImage) => {
     let fixedRows = rows.map(item => item.replace(/\D/g, ''))
     fixedRows = fixedRows.filter(item => item)
     fixedRows = fixedRows.map(item => item.split(''))
+    fixedRows.forEach(r => {
+      if (r.length > 1 && r.indexOf('0') > -1) {
+        // 如果识别内容数字有多个，里面是不可能存在孤立的数字0的。将0和其左边数字合并
+        // 先找出所有是0的位置
+        const allZeroIndex = r.reduce((soFar, item, i) => {
+          if (item === '0') {
+            soFar.push(i)
+          }
+          return soFar
+        }, [])
+        for (let j = allZeroIndex.length - 1; j >= 0; j--) {
+          // 从末尾处理，将指定的0位置目前的内容拿到，然后合并到其左侧数字中
+          const targetZeroIndex = allZeroIndex[j]
+          const targetContent = r[targetZeroIndex]
+          if (targetZeroIndex - 1 >= 0) {
+            r[targetZeroIndex - 1] = `${r[targetZeroIndex - 1]}${targetContent}`
+            r.splice(targetZeroIndex, 1)
+          }
+        }
+      }
+    })
     console.log(fixedRows)
     eventBus.emit('notifyShowOcrResult', {
       result: fixedRows,
