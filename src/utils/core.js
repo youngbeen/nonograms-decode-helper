@@ -487,6 +487,7 @@ export const resolveSideExactMarkedPiece = (puz, answer) => {
   return result
 }
 
+// TODO 可以移除？
 // 方法根据单个未知格子分隔开的两块marked，尝试判断是否是一个合法的连续完整块。如果连起来的长度超过最大数字，则为非法。该未知格子必定是cross
 export const resolveSplitMarkedPieces = (puz, answer) => {
   const result = [
@@ -834,6 +835,142 @@ export const resolveSmallSpace = (puz, answer) => {
   return result
 }
 
+// 方法根据两个相邻的未解决块，如果相邻块之间只有一个未知格子，则判断两个相邻块合并之后是否超过未解决数字的最大值。如果非法则将此未知格子标记为cross
+// 方法根据某行/列未解决的marked块只有2个，且未解决的数字只剩1个，则尝试合并连接这2个块，如果合并连接之后的新完整块长度小于等于未解决的最后一个数字，则说明2个未解决的marked块中间的所有未知格子都应该是'1'。此时如果新完整块正好等于最后一个数字，则说明所有块都已经找到并明确，应当把其他剩余的未知格子全部标记'0'。如果此时新完整块还不足最后一个数字，例如新完整块是3，最后一个未解决数字是4，则说明连接之后的完整块左右两个格子是不确定的未知格子''，而其他的未知格子都应该标记'0'
+export const resolveAdjacentBlocks = (puz, answer) => {
+  const result = []
+  const { top: colClues, left: rowClues } = puz
+  const width = colClues.length
+  const height = rowClues.length
+
+  // 处理行和列的统一逻辑
+  const process = (direction, clues) => {
+    for (let index = 0; index < clues.length; index++) {
+      const lineInfo = getLineInfo(direction, answer, index)
+      const unsolvedNumbers = getUnsolvedNumbers(clues[index], lineInfo.markedPieces)
+      const unresolvedPieces = lineInfo.markedPieces.filter(p => !p.resolved)
+
+      /* 两个未解决块 + 一个未解决数字 */
+      if (unsolvedNumbers.length === 1 && unresolvedPieces.length === 2) {
+        const [current, next] = unresolvedPieces
+        const gap = next.fromIndex - current.toIndex - 1
+        const mergedLength = current.length + gap + next.length
+        const target = unsolvedNumbers[0]
+
+        // 验证间隙全部为未知格子
+        let canMerge = true
+        for (let i = current.toIndex + 1; i < next.fromIndex; i++) {
+          const val = direction === 'row' ? answer[index][i] : answer[i][index]
+          if (val !== '') {
+            canMerge = false
+            break
+          }
+        }
+
+        if (canMerge) {
+          // 场景1：合并后长度正好匹配
+          if (mergedLength === target) {
+            // 填充间隙为1
+            for (let i = current.toIndex + 1; i < next.fromIndex; i++) {
+              result.push({
+                x: direction === 'row' ? i : index,
+                y: direction === 'row' ? index : i,
+                value: '1'
+              })
+            }
+            // 标记其他未知为0
+            const lineLength = direction === 'row' ? width : height
+            for (let i = 0; i < lineLength; i++) {
+              const val = direction === 'row' ? answer[index][i] : answer[i][index]
+              if (val === '' && (i < current.fromIndex || i > next.toIndex)) {
+                result.push({
+                  x: direction === 'row' ? i : index,
+                  y: direction === 'row' ? index : i,
+                  value: '0'
+                })
+              }
+            }
+          }
+          // 场景2：合并后长度不足
+          else if (mergedLength < target) {
+            // 填充间隙为1
+            for (let i = current.toIndex + 1; i < next.fromIndex; i++) {
+              result.push({
+                x: direction === 'row' ? i : index,
+                y: direction === 'row' ? index : i,
+                value: '1'
+              })
+            }
+            // 计算需要保留的扩展边界
+            const extendSize = target - mergedLength
+            const leftBound = current.fromIndex - extendSize
+            const rightBound = next.toIndex + extendSize
+            // 标记远端未知为0
+            const lineLength = direction === 'row' ? width : height
+            for (let i = 0; i < lineLength; i++) {
+              const val = direction === 'row' ? answer[index][i] : answer[i][index]
+              if (val === '' && (i < leftBound || i > rightBound)) {
+                result.push({
+                  x: direction === 'row' ? i : index,
+                  y: direction === 'row' ? index : i,
+                  value: '0'
+                })
+              }
+            }
+          }
+        }
+      }
+
+      // 寻找需要处理的相邻块
+      for (let i = 0; i < lineInfo.markedPieces.length - 1; i++) {
+        const current = lineInfo.markedPieces[i]
+        const next = lineInfo.markedPieces[i + 1]
+
+        // 仅处理未解决的相邻块
+        if (!current.resolved && !next.resolved) {
+          const gap = next.fromIndex - current.toIndex - 1
+
+          // 当间隔正好为1个未知格子时
+          if (gap === 1) {
+            const gapIndex = current.toIndex + 1
+
+            // 验证间隔格确实未知（空字符串）
+            const cellValue = direction === 'row'
+              ? answer[index][gapIndex]
+              : answer[gapIndex][index]
+
+            if (cellValue === '') {
+              // 计算合并后的总长度（包含间隔）
+              const mergedLength = current.length + 1 + next.length
+
+              // 检查是否超过未解决数字的最大值
+              const maxUnsolved = unsolvedNumbers.length > 0
+                ? Math.max(...unsolvedNumbers)
+                : 0
+
+              if (mergedLength > maxUnsolved) {
+                // 标记间隔格为0
+                const coord = direction === 'row'
+                  ? { x: gapIndex, y: index }
+                  : { x: index, y: gapIndex }
+
+                result.push({ ...coord, value: '0' })
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // 处理所有行
+  process('row', rowClues)
+  // 处理所有列
+  process('column', colClues)
+
+  return result
+}
+
 // 只有一个数字，将所有之间的未知项连起来，最后处理左右余数之外的全部标cross
 export const resolveLonelyNumber = (puz, answer) => {
   const width = puz.top.length
@@ -1155,6 +1292,22 @@ const getLineInfo = (direction, answer, index) => {
     unknownCount,
     totalCount
   }
+}
+
+// 辅助方法：获取未解决的线索数字
+const getUnsolvedNumbers = (clueNumbers, markedPieces) => {
+  const solvedLengths = markedPieces
+    .filter(p => p.resolved)
+    .map(p => p.length)
+
+  // 深拷贝原始数字并过滤已解决的
+  const unsolved = [...clueNumbers]
+  for (const len of solvedLengths) {
+    const index = unsolved.indexOf(len)
+    if (index > -1) unsolved.splice(index, 1)
+  }
+
+  return unsolved.length > 0 ? unsolved : [...clueNumbers]
 }
 
 // 获取指定行/列中下一个边界信息（cross或者左右边界）

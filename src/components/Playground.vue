@@ -5,7 +5,7 @@ import { createWorker } from 'tesseract.js'
 import { clipboard } from '@youngbeen/angle-ctrl'
 import eventBus from '@/EventBus'
 import demoData from '@/demo/demoData'
-import { initMap, resolveBlock, resolveEdge, resolveMaxNumber, resolveSideExactMarkedPiece, resolveSmallSideSpace, resolveSmallSpace, resolveLonelyNumber, resolveSplitMarkedPieces, resolveMarkedOrCrossed, mnQuantaResolve, checkAnswerSheet, getLineSum, compareHumanAndAi } from '@/utils/core'
+import { initMap, resolveBlock, resolveEdge, resolveMaxNumber, resolveSideExactMarkedPiece, resolveSmallSideSpace, resolveSmallSpace, resolveAdjacentBlocks, resolveLonelyNumber, resolveMarkedOrCrossed, mnQuantaResolve, checkAnswerSheet, getLineSum, compareHumanAndAi } from '@/utils/core'
 import { aiSolve } from '@/utils/ai'
 import { optimizeImage } from '@/utils/image'
 import { addToStorage, clearStorage, getStorageByOffset, saveCopy, getSavedCopy, savePreset, getPreset } from '@/utils/storage'
@@ -639,7 +639,7 @@ const startDecode = () => {
     }
   })
   if (!flag) {
-    window.alert(`Some numbers are oversize(${wrongPuzLines.join(',')})`)
+    window.alert(`Numbers are oversize(${wrongPuzLines.join(',')})`)
     return
   }
   // all top numbers sum must === all left numbers sum, check it
@@ -656,7 +656,7 @@ const startDecode = () => {
     })
   })
   if (topSum !== leftSum) {
-    window.alert('Some numbers are not correct, you should revise it first')
+    window.alert(`Numbers sum is not correct(left${leftSum}, top${topSum})`)
     return
   }
   status.value = 'resolving'
@@ -709,16 +709,16 @@ const resolveBySideExactMarkedPiece = (noSave = false) => {
     versionOffset.value = 0
   }
 }
-const resolveBySplitMarkedPieces = (noSave = false) => {
-  resolveSplitMarkedPieces(puz, answerMap.data).forEach(a => {
-    answerMap.data[a.y][a.x] = a.value
-  })
-  if (!noSave) {
-    const res = addToStorage(answerMap.data, versionOffset.value)
-    versionCount.value = res.length
-    versionOffset.value = 0
-  }
-}
+// const resolveBySplitMarkedPieces = (noSave = false) => {
+//   resolveSplitMarkedPieces(puz, answerMap.data).forEach(a => {
+//     answerMap.data[a.y][a.x] = a.value
+//   })
+//   if (!noSave) {
+//     const res = addToStorage(answerMap.data, versionOffset.value)
+//     versionCount.value = res.length
+//     versionOffset.value = 0
+//   }
+// }
 const resolveBySmallSideSpace = (noSave = false) => {
   resolveSmallSideSpace(puz, answerMap.data).forEach(a => {
     answerMap.data[a.y][a.x] = a.value
@@ -731,6 +731,16 @@ const resolveBySmallSideSpace = (noSave = false) => {
 }
 const resolveBySmallSpace = (noSave = false) => {
   resolveSmallSpace(puz, answerMap.data).forEach(a => {
+    answerMap.data[a.y][a.x] = a.value
+  })
+  if (!noSave) {
+    const res = addToStorage(answerMap.data, versionOffset.value)
+    versionCount.value = res.length
+    versionOffset.value = 0
+  }
+}
+const resolveByAdjacentBlocks = (noSave = false) => {
+  resolveAdjacentBlocks(puz, answerMap.data).forEach(a => {
     answerMap.data[a.y][a.x] = a.value
   })
   if (!noSave) {
@@ -922,14 +932,15 @@ const standardResolve = () => {
   resolveByEdge(true)
   resolveByMaxNumber(true)
   resolveBySideExactMarkedPiece(true)
-  resolveBySplitMarkedPieces(true)
+  // resolveBySplitMarkedPieces(true)
   resolveBySmallSideSpace(true)
   resolveBySmallSpace(true)
+  resolveByAdjacentBlocks(true)
   resolveByLonelyNumber(true)
   resolveByMarkedOrCrossed(true)
   checkAnswerSheet(puz, answerMap.data)
   const compareResult = compareHumanAndAi(answerMap.data, aiResult)
-  console.log('人工推理vsAI推理结果', compareResult)
+  console.log('人工推理 vs AI推理结果', compareResult)
   if (compareResult && compareResult.aiPros) {
     answerMap.aiPros = compareResult.aiPros
   } else {
@@ -1111,15 +1122,16 @@ const handleDragEnd = (e) => {
     <p class="action-seg" v-show="status === 'resolving'">
       <button @click="standardResolve">Resolve(R / blank space)</button>
       <button v-show="answerMap.aiPros.length" @click="acceptAiResolve()">Accept AI Resolve(a)</button>
-      <!-- <button v-show="debug" @click="resolveByBlock">Resolve By Blocks</button>
-      <button v-show="debug" @click="resolveByEdge">Resolve By Edge</button>
-      <button v-show="debug" @click="resolveByMaxNumber">Resolve By Max Number</button>
-      <button v-show="debug" @click="resolveBySideExactMarkedPiece">Resolve By Side Exact Marked Piece</button>
-      <button v-show="debug" @click="resolveBySplitMarkedPieces">Resolve By Split Marked Pieces</button>
-      <button v-show="debug" @click="resolveBySmallSideSpace">Resolve By Small Side Space</button>
-      <button v-show="debug" @click="resolveBySmallSpace">Resolve By Small Space</button>
-      <button v-show="debug" @click="resolveByLonelyNumber">Resolve By Lonely Number</button>
-      <button v-show="debug" @click="resolveByMarkedOrCrossed">Resolve By Marked/Crossed</button> -->
+      <!-- <button v-show="debug" @click="resolveByBlock">Resolve By Blocks</button> -->
+      <!-- <button v-show="debug" @click="resolveByEdge">Resolve By Edge</button> -->
+      <!-- <button v-show="debug" @click="resolveByMaxNumber">Resolve By Max Number</button> -->
+      <!-- <button v-show="debug" @click="resolveBySideExactMarkedPiece">Resolve By Side Exact Marked Piece</button> -->
+      <!-- <button v-show="debug" @click="resolveBySplitMarkedPieces">Resolve By Split Marked Pieces</button> -->
+      <!-- <button v-show="debug" @click="resolveBySmallSideSpace">Resolve By Small Side Space</button> -->
+      <!-- <button v-show="debug" @click="resolveBySmallSpace">Resolve By Small Space</button> -->
+      <!-- <button v-show="debug" @click="resolveByAdjacentBlocks">Resolve By Adjacent Block</button> -->
+      <!-- <button v-show="debug" @click="resolveByLonelyNumber">Resolve By Lonely Number</button> -->
+      <!-- <button v-show="debug" @click="resolveByMarkedOrCrossed">Resolve By Marked/Crossed</button> -->
       <button @click="resolveByMn">m**n Resolve({{ estTime }})</button>
     </p>
     <p class="action-seg" v-show="status === 'resolving'">
