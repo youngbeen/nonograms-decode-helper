@@ -1700,7 +1700,7 @@ export const initMap = (width, height) => {
 
 const sum = (data) => {
   return data.reduce((total, val) => {
-    return total + val
+    return total + parseInt(val, 10)
   }, 0)
 }
 
