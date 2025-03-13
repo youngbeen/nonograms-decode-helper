@@ -12,7 +12,14 @@ let callbackFn = () => {}
 onMounted(() => {
   eventBus.on('notifyShowFollowInput', params => {
     // console.log('show follow input', params)
-    x.value = params.x || 0
+    const windowWidth = window.innerWidth || document.documentElement.clientWidth
+    const originalX = params.x || 0
+    if (originalX > windowWidth - 420) {
+      // 位置太靠右，修正位置
+      x.value = windowWidth - 420
+    } else {
+      x.value = originalX
+    }
     y.value = params.y || 0
     inputValue.value = params.value.join(' ')
     callbackFn = params.callback || (() => {})
@@ -58,7 +65,15 @@ const submit = () => {
 input {
   margin-right: 1rem;
   min-width: 200px;
-  height: 30px;
-  line-height: 30px;
+  height: 48px;
+  line-height: 48px;
+  font-size: 24px;
+  font-weight: 500;
+  font-family: consolas;
+}
+button {
+  height: 48px;
+  min-width: 60px;
+  font-size: 24px;
 }
 </style>
