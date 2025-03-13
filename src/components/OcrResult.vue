@@ -1,62 +1,220 @@
 <script setup>
-import { ref, onMounted, onBeforeUnmount, reactive, computed } from 'vue'
+import { ref, onMounted, onBeforeUnmount, reactive } from 'vue'
+import { createWorker } from 'tesseract.js'
 import eventBus from '@/EventBus'
-
-const props = defineProps({
-  location: {
-    type: String,
-    required: true
-  },
-  width: {
-    type: Number,
-    required: false,
-    default: 0
-  },
-  height: {
-    type: Number,
-    required: false,
-    default: 0
-  }
-})
+import { optimizeImage } from '@/utils/image'
 
 const isShow = ref(false)
-const ocrResult = reactive({
+const width = ref(20)
+const height = ref(20)
+const step = ref('load') // load | confirm
+const tab = ref('left') // left | top
+const leftFile = ref(null)
+const topFile = ref(null)
+const ocrLeftResult = reactive({
   result: [],
   originalImage: null,
   fixedImage: null
 })
-const possibleMaxSize = computed(() => {
-  return Math.max(ocrResult.result.length, props.width, props.height)
+const ocrTopResult = reactive({
+  result: [],
+  originalImage: null,
+  fixedImage: null
 })
 
 onMounted(() => {
-  eventBus.on('notifyShowOcrResult', ({ result, originalImage, fixedImage }) => {
-    ocrResult.result = result
-    ocrResult.originalImage = originalImage
-    ocrResult.fixedImage = fixedImage
+  eventBus.on('ocrInput', () => {
     isShow.value = true
   })
 })
 
 onBeforeUnmount(() => {
-  eventBus.off('notifyShowOcrResult')
+  eventBus.off('ocrInput')
 })
+
+const handleFileChange = (event, location) => {
+  const files = event.target.files
+  const postFiles = Array.prototype.slice.call(files)
+  if (postFiles.length === 0) {
+    return
+  }
+  if (location === 'left') {
+    leftFile.value = postFiles[0]
+  } else {
+    topFile.value = postFiles[0]
+  }
+}
+
+const ocrLoad = (image, location) => {
+  // 先预处理图片
+  const reader = new FileReader()
+  reader.onload = (e) => {
+    // e.target.result 是DataURL
+    const imageUrl = e.target.result
+    // 创建Image对象
+    const newImage = new Image()
+    newImage.src = imageUrl
+    // 等待图片加载完成后处理
+    newImage.onload = async () => {
+      const fixedImage = preprocessImage(newImage, location)
+      console.log('fixedImage', fixedImage)
+      if (location === 'top') {
+        // 顶部的数字是竖向的，行级扫描识别会丢失位置信息，切分为竖列N个小图块识别可以保证同一列数字不丢失
+        const mainImage = new Image()
+        mainImage.src = fixedImage
+        mainImage.onload = async (e) => {
+          const worker = await createWorker('eng', 1, {
+            corePath: '/nonograms-decode/',
+            workerPath: '/nonograms-decode/worker.min.js'
+          })
+          await worker.setParameters({
+            tessedit_char_whitelist: '0123456789',
+            // preserve_interword_spaces: '1',
+            // tessedit_pageseg_mode: '5'
+          })
+          const choppedImages = chopImage(mainImage, width.value, 'vertical')
+          console.log('choppedImages', choppedImages)
+          const rets = await Promise.all(choppedImages.map(async c => {
+            const ret = await worker.recognize(c)
+            return ret.data.text
+          }))
+          // console.log('rets', rets)
+          afterOcr(rets, imageUrl, choppedImages, location)
+          await worker.terminate()
+        }
+      } else {
+        // 左侧以一个整体逐行识别，准确率高
+        const worker = await createWorker('eng', 1, {
+          corePath: '/nonograms-decode/',
+          workerPath: '/nonograms-decode/worker.min.js'
+        })
+        await worker.setParameters({
+          tessedit_char_whitelist: '0123456789',
+          // preserve_interword_spaces: '1',
+          // tessedit_pageseg_mode: '5'
+        })
+        const ret = await worker.recognize(fixedImage)
+        // console.log(ret.data.text)
+        afterOcr(ret.data.text, imageUrl, fixedImage, location)
+        await worker.terminate()
+      }
+    }
+  }
+  reader.readAsDataURL(image)
+}
+const preprocessImage = (image, location) => {
+  const canvas = document.querySelector(`#ocr-canvas-${location}`)
+  const ctx = canvas.getContext('2d', {
+    willReadFrequently: true
+  })
+  // 设置Canvas的尺寸与图片一致
+  canvas.width = image.width
+  canvas.height = image.height
+  ctx.drawImage(image, 0, 0)
+  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
+  optimizeImage(imageData)
+
+  ctx.putImageData(imageData, 0, 0)
+  return canvas.toDataURL()
+}
+const chopImage = (mainImage, segCount, direction) => {
+  const canvas = document.querySelector('#ocr-canvas-top')
+  const ctx = canvas.getContext('2d', {
+    willReadFrequently: true
+  })
+  const mainImageWidth = mainImage.width
+  const mainImageHeight = mainImage.height
+  let result = []
+  if (direction === 'vertical') {
+    // 竖向切割
+    const chopWidth = mainImageWidth / segCount
+    // 设置Canvas的尺寸与图片一致
+    canvas.width = chopWidth
+    canvas.height = mainImageHeight
+    for (let i = 0; i < segCount; i++) {
+      ctx.drawImage(mainImage, i * chopWidth, 0, chopWidth, mainImageHeight, 0, 0, chopWidth, mainImageHeight)
+      result.push(canvas.toDataURL())
+    }
+  } else {
+    // 横向切割
+    const chopHeight = mainImageHeight / segCount
+    // 设置Canvas的尺寸与图片一致
+    canvas.width = mainImageWidth
+    canvas.height = chopHeight
+    for (let i = 0; i < segCount; i++) {
+      ctx.drawImage(mainImage, 0, i * chopHeight, mainImageWidth, chopHeight, 0, 0, mainImageWidth, chopHeight)
+      result.push(canvas.toDataURL())
+    }
+  }
+
+  return result
+}
+const afterOcr = (rawContent, originalImage, fixedImage, location) => {
+  console.log('OCR数据', rawContent)
+  if (location === 'top') {
+    // 处理顶部的数字
+    const columns = rawContent.map(r => {
+      if (!r) {
+        return ['0']
+      } else {
+        let ary = r.split('\n')
+        return ary.filter(item => item)
+      }
+    })
+    console.log(columns)
+    ocrTopResult.result = columns
+    ocrTopResult.originalImage = originalImage
+    ocrTopResult.fixedImage = fixedImage
+  } else {
+    // 处理左侧的数字，以行形式存在
+    const rows = rawContent.split('\n')
+    let fixedRows = rows.map(item => item.replace(/\D/g, ''))
+    fixedRows = fixedRows.filter(item => item)
+    fixedRows = fixedRows.map(item => item.split(''))
+    fixedRows.forEach(r => {
+      if (r.length > 1 && r.indexOf('0') > -1) {
+        // 如果识别内容数字有多个，里面是不可能存在孤立的数字0的。将0和其左边数字合并
+        // 先找出所有是0的位置
+        const allZeroIndex = r.reduce((soFar, item, i) => {
+          if (item === '0') {
+            soFar.push(i)
+          }
+          return soFar
+        }, [])
+        for (let j = allZeroIndex.length - 1; j >= 0; j--) {
+          // 从末尾处理，将指定的0位置目前的内容拿到，然后合并到其左侧数字中
+          const targetZeroIndex = allZeroIndex[j]
+          const targetContent = r[targetZeroIndex]
+          if (targetZeroIndex - 1 >= 0) {
+            r[targetZeroIndex - 1] = `${r[targetZeroIndex - 1]}${targetContent}`
+            r.splice(targetZeroIndex, 1)
+          }
+        }
+      }
+    })
+    console.log(fixedRows)
+    ocrLeftResult.result = fixedRows
+    ocrLeftResult.originalImage = originalImage
+    ocrLeftResult.fixedImage = fixedImage
+  }
+}
 
 const handleCollapse = (rowIndex, cellIndex) => {
   // 将指定的格子和右侧格子数字合并
-  const row = ocrResult.result[rowIndex]
+  const row = ocrLeftResult.result[rowIndex]
   const rightNumber = row[cellIndex + 1]
   row.splice(cellIndex + 1, 1)
   row[cellIndex] = `${row[cellIndex].toString()}${rightNumber.toString()}`
 }
 const handleExpend = (rowIndex, cellIndex) => {
   // 将指定的格子数字全部拆分为单独数字
-  const row = ocrResult.result[rowIndex]
+  const row = ocrLeftResult.result[rowIndex]
   const expendNumbers = row[cellIndex].toString().split('')
   row.splice(cellIndex, 1, ...expendNumbers)
 }
-const handleEdit = (rowIndex, e) => {
-  const row = ocrResult.result[rowIndex]
+const handleEdit = (rowIndex, location, e) => {
+  const result = location === 'left' ? ocrLeftResult.result : ocrTopResult.result
+  const row = result[rowIndex]
   eventBus.emit('notifyShowFollowInput', {
     x: e.clientX,
     y: e.clientY,
@@ -64,27 +222,45 @@ const handleEdit = (rowIndex, e) => {
     callback: (value) => {
       const fixedVal = value.replace(/[^\d\s,/]/g, '').replace(/[\s/]/g, ',').replace(/,{2,}/g, ',').replace(/^,/, '').replace(/,$/, '')
       const ary = fixedVal.split(',')
-      ocrResult.result.splice(rowIndex, 1, ary)
+      result.splice(rowIndex, 1, ary)
     }
   })
 }
-const handleNew = (rowIndex, div) => {
-  ocrResult.result.splice(rowIndex + div, 0, ['1'])
+const handleNew = (rowIndex, location, div) => {
+  const result = location === 'left' ? ocrLeftResult.result : ocrTopResult.result
+  result.splice(rowIndex + div, 0, ['1'])
 }
-const handleDelete = (rowIndex) => {
-  ocrResult.result.splice(rowIndex, 1)
+const handleDelete = (rowIndex, location) => {
+  const result = location === 'left' ? ocrLeftResult.result : ocrTopResult.result
+  result.splice(rowIndex, 1)
 }
 const confirm = () => {
-  eventBus.emit('confirmOcrResult', {
-    result: ocrResult.result,
-    location: props.location
-  })
-  close()
+  if (step.value === 'load') {
+    if (!width.value || !height.value) {
+      return
+    }
+    ocrLoad(leftFile.value, 'left')
+    ocrLoad(topFile.value, 'top')
+    step.value = 'confirm'
+  } else {
+    eventBus.emit('confirmOcrResult', {
+      leftResult: ocrLeftResult.result,
+      topResult: ocrTopResult.result,
+    })
+    close()
+  }
 }
 const close = () => {
-  ocrResult.result = []
-  ocrResult.originalImage = null
-  ocrResult.fixedImage = null
+  ocrLeftResult.result = []
+  ocrLeftResult.originalImage = null
+  ocrLeftResult.fixedImage = null
+  ocrTopResult.result = []
+  ocrTopResult.originalImage = null
+  ocrTopResult.fixedImage = null
+  step.value = 'load'
+  tab.value = 'left'
+  leftFile.value = null
+  topFile.value = null
   isShow.value = false
 }
 </script>
@@ -92,20 +268,36 @@ const close = () => {
 <template>
   <div class="box-ocr-result"
     v-show="isShow">
-    <div class="cs-pop-title">Confirm OCR Result</div>
-    <div style="display: flex;">
+    <div class="cs-pop-title">{{ step === 'load' ? 'Set OCR' : 'Confirm OCR Result' }}</div>
+    <!-- 设置尺寸 & 加载图片 -->
+    <div v-show="step === 'load'">
+      <input type="text" v-model="width" placeholder="width">
+      <input type="text" v-model="height" placeholder="height">
+
+      <input id="ocr-file-upload-left" type="file" name="image" accept=".jpg,.png,.jpeg,.bmp" @change="handleFileChange($event, 'left')" />
+      <input id="ocr-file-upload-top" type="file" name="image" accept=".jpg,.png,.jpeg,.bmp" @change="handleFileChange($event, 'top')" />
+      <canvas id="ocr-canvas-left" style="display: none;"></canvas>
+      <canvas id="ocr-canvas-top" style="display: none;"></canvas>
+    </div>
+
+    <!-- 展示并确认OCR结果 -->
+    <div v-show="step === 'confirm'"
+      style="display: flex;">
+      <button @click="tab = 'left'">Left</button>
+      <button @click="tab = 'top'">Top</button>
       <div style="margin-right: 8px;">
-        <img class="ocr-image" v-if="ocrResult.originalImage" :src="ocrResult.originalImage" alt="">
+        <img class="ocr-image" v-show="tab === 'left'" :src="ocrLeftResult.originalImage" alt="">
+        <img class="ocr-image" v-show="tab === 'top'" :src="ocrTopResult.originalImage" alt="">
       </div>
       <div class="box-left-confirm"
-        v-if="location === 'left'">
+        v-if="tab === 'left'">
         <div class="row-box"
-          v-for="(r, ri) in ocrResult.result" :key="ri">
+          v-for="(r, ri) in ocrLeftResult.result" :key="ri">
           <div class="row"
             :data-index="ri + 1"
-            @dblclick="handleEdit(ri, $event)">
+            @dblclick="handleEdit(ri, 'left', $event)">
             <div class="cell"
-              :class="[parseInt(c) > possibleMaxSize && 'warning-cell']"
+              :class="[parseInt(c) > width && 'warning-cell']"
               v-for="(c, ci) in r" :key="ci">
               <svg class="icon-btn icon-expend" v-if="c.length > 1" @click="handleExpend(ri, ci)" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M7.44975 7.05029L2.5 12L7.44727 16.9473L8.86148 15.5331L6.32843 13H17.6708L15.1358 15.535L16.55 16.9493L21.5 11.9996L16.5503 7.0498L15.136 8.46402L17.6721 11H6.32843L8.86396 8.46451L7.44975 7.05029Z"></path></svg>
               {{ c }}
@@ -113,22 +305,22 @@ const close = () => {
             </div>
           </div>
           <div class="box-row-actions">
-            <svg class="icon-btn icon-edit" @click="handleEdit(ri, $event)" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M15.7279 9.57627L14.3137 8.16206L5 17.4758V18.89H6.41421L15.7279 9.57627ZM17.1421 8.16206L18.5563 6.74785L17.1421 5.33363L15.7279 6.74785L17.1421 8.16206ZM7.24264 20.89H3V16.6473L16.435 3.21231C16.8256 2.82179 17.4587 2.82179 17.8492 3.21231L20.6777 6.04074C21.0682 6.43126 21.0682 7.06443 20.6777 7.45495L7.24264 20.89Z"></path></svg>
-            <svg class="icon-btn icon-copyup" @click="handleNew(ri, 0)" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M20 3H4C3.44772 3 3 3.44772 3 4V20C3 20.5523 3.44772 21 4 21H20C20.5523 21 21 20.5523 21 20V4C21 3.44772 20.5523 3 20 3ZM5 19V5H19V19H5ZM12 6.34311L6.34315 12L7.75736 13.4142L11 10.1715V17.6568H13V10.1715L16.2426 13.4142L17.6569 12L12 6.34311Z"></path></svg>
-            <svg class="icon-btn icon-copydown" @click="handleNew(ri, 1)" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M20 3H4C3.44772 3 3 3.44772 3 4V20C3 20.5523 3.44772 21 4 21H20C20.5523 21 21 20.5523 21 20V4C21 3.44772 20.5523 3 20 3ZM5 19V5H19V19H5ZM11.0005 6.34375V13.829L7.75789 10.5864L6.34367 12.0006L12.0005 17.6575L17.6574 12.0006L16.2432 10.5864L13.0005 13.829V6.34375H11.0005Z"></path></svg>
-            <svg class="icon-btn icon-delete" @click="handleDelete(ri)" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M17 6H22V8H20V21C20 21.5523 19.5523 22 19 22H5C4.44772 22 4 21.5523 4 21V8H2V6H7V3C7 2.44772 7.44772 2 8 2H16C16.5523 2 17 2.44772 17 3V6ZM18 8H6V20H18V8ZM13.4142 13.9997L15.182 15.7675L13.7678 17.1817L12 15.4139L10.2322 17.1817L8.81802 15.7675L10.5858 13.9997L8.81802 12.232L10.2322 10.8178L12 12.5855L13.7678 10.8178L15.182 12.232L13.4142 13.9997ZM9 4V6H15V4H9Z"></path></svg>
+            <svg class="icon-btn icon-edit" @click="handleEdit(ri, 'left', $event)" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M15.7279 9.57627L14.3137 8.16206L5 17.4758V18.89H6.41421L15.7279 9.57627ZM17.1421 8.16206L18.5563 6.74785L17.1421 5.33363L15.7279 6.74785L17.1421 8.16206ZM7.24264 20.89H3V16.6473L16.435 3.21231C16.8256 2.82179 17.4587 2.82179 17.8492 3.21231L20.6777 6.04074C21.0682 6.43126 21.0682 7.06443 20.6777 7.45495L7.24264 20.89Z"></path></svg>
+            <svg class="icon-btn icon-copyup" @click="handleNew(ri, 'left', 0)" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M20 3H4C3.44772 3 3 3.44772 3 4V20C3 20.5523 3.44772 21 4 21H20C20.5523 21 21 20.5523 21 20V4C21 3.44772 20.5523 3 20 3ZM5 19V5H19V19H5ZM12 6.34311L6.34315 12L7.75736 13.4142L11 10.1715V17.6568H13V10.1715L16.2426 13.4142L17.6569 12L12 6.34311Z"></path></svg>
+            <svg class="icon-btn icon-copydown" @click="handleNew(ri, 'left', 1)" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M20 3H4C3.44772 3 3 3.44772 3 4V20C3 20.5523 3.44772 21 4 21H20C20.5523 21 21 20.5523 21 20V4C21 3.44772 20.5523 3 20 3ZM5 19V5H19V19H5ZM11.0005 6.34375V13.829L7.75789 10.5864L6.34367 12.0006L12.0005 17.6575L17.6574 12.0006L16.2432 10.5864L13.0005 13.829V6.34375H11.0005Z"></path></svg>
+            <svg class="icon-btn icon-delete" @click="handleDelete(ri, 'left')" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M17 6H22V8H20V21C20 21.5523 19.5523 22 19 22H5C4.44772 22 4 21.5523 4 21V8H2V6H7V3C7 2.44772 7.44772 2 8 2H16C16.5523 2 17 2.44772 17 3V6ZM18 8H6V20H18V8ZM13.4142 13.9997L15.182 15.7675L13.7678 17.1817L12 15.4139L10.2322 17.1817L8.81802 15.7675L10.5858 13.9997L8.81802 12.232L10.2322 10.8178L12 12.5855L13.7678 10.8178L15.182 12.232L13.4142 13.9997ZM9 4V6H15V4H9Z"></path></svg>
           </div>
         </div>
       </div>
       <div class="box-top-confirm"
-        v-if="location === 'top'">
+        v-if="tab === 'top'">
         <div class="col-box"
-          v-for="(r, ri) in ocrResult.result" :key="ri">
+          v-for="(r, ri) in ocrTopResult.result" :key="ri">
           <div class="col"
             :data-index="ri + 1"
-            @dblclick="handleEdit(ri, $event)">
+            @dblclick="handleEdit(ri, 'top', $event)">
             <div class="cell"
-              :class="[parseInt(c) > possibleMaxSize && 'warning-cell']"
+              :class="[parseInt(c) > height && 'warning-cell']"
               v-for="(c, ci) in r" :key="ci">
               <!-- <svg class="icon-btn icon-expend" v-if="c.length > 1" @click="handleExpend(ri, ci)" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M7.44975 7.05029L2.5 12L7.44727 16.9473L8.86148 15.5331L6.32843 13H17.6708L15.1358 15.535L16.55 16.9493L21.5 11.9996L16.5503 7.0498L15.136 8.46402L17.6721 11H6.32843L8.86396 8.46451L7.44975 7.05029Z"></path></svg> -->
               {{ c }}
@@ -136,19 +328,19 @@ const close = () => {
             </div>
           </div>
           <div class="box-col-actions">
-            <svg class="icon-btn icon-edit" @click="handleEdit(ri, $event)" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M15.7279 9.57627L14.3137 8.16206L5 17.4758V18.89H6.41421L15.7279 9.57627ZM17.1421 8.16206L18.5563 6.74785L17.1421 5.33363L15.7279 6.74785L17.1421 8.16206ZM7.24264 20.89H3V16.6473L16.435 3.21231C16.8256 2.82179 17.4587 2.82179 17.8492 3.21231L20.6777 6.04074C21.0682 6.43126 21.0682 7.06443 20.6777 7.45495L7.24264 20.89Z"></path></svg>
-            <svg class="icon-btn icon-copyup" @click="handleNew(ri, 0)" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M20 3H4C3.44772 3 3 3.44772 3 4V20C3 20.5523 3.44772 21 4 21H20C20.5523 21 21 20.5523 21 20V4C21 3.44772 20.5523 3 20 3ZM5 19V5H19V19H5ZM6.3436 12.001L12.0005 6.34412L13.4147 7.75834L10.172 11.001H17.6573V13.001H10.172L13.4147 16.2436L12.0005 17.6578L6.3436 12.001Z"></path></svg>
-            <svg class="icon-btn icon-copydown" @click="handleNew(ri, 1)" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M20 3H4C3.44772 3 3 3.44772 3 4V20C3 20.5523 3.44772 21 4 21H20C20.5523 21 21 20.5523 21 20V4C21 3.44772 20.5523 3 20 3ZM5 19V5H19V19H5ZM17.6569 12L12 17.6568L10.5858 16.2426L13.8284 13H6.34315V11L13.8284 11L10.5858 7.75732L12 6.34311L17.6569 12Z"></path></svg>
-            <svg class="icon-btn icon-delete" @click="handleDelete(ri)" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M17 6H22V8H20V21C20 21.5523 19.5523 22 19 22H5C4.44772 22 4 21.5523 4 21V8H2V6H7V3C7 2.44772 7.44772 2 8 2H16C16.5523 2 17 2.44772 17 3V6ZM18 8H6V20H18V8ZM13.4142 13.9997L15.182 15.7675L13.7678 17.1817L12 15.4139L10.2322 17.1817L8.81802 15.7675L10.5858 13.9997L8.81802 12.232L10.2322 10.8178L12 12.5855L13.7678 10.8178L15.182 12.232L13.4142 13.9997ZM9 4V6H15V4H9Z"></path></svg>
+            <svg class="icon-btn icon-edit" @click="handleEdit(ri, 'top', $event)" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M15.7279 9.57627L14.3137 8.16206L5 17.4758V18.89H6.41421L15.7279 9.57627ZM17.1421 8.16206L18.5563 6.74785L17.1421 5.33363L15.7279 6.74785L17.1421 8.16206ZM7.24264 20.89H3V16.6473L16.435 3.21231C16.8256 2.82179 17.4587 2.82179 17.8492 3.21231L20.6777 6.04074C21.0682 6.43126 21.0682 7.06443 20.6777 7.45495L7.24264 20.89Z"></path></svg>
+            <svg class="icon-btn icon-copyup" @click="handleNew(ri, 'top', 0)" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M20 3H4C3.44772 3 3 3.44772 3 4V20C3 20.5523 3.44772 21 4 21H20C20.5523 21 21 20.5523 21 20V4C21 3.44772 20.5523 3 20 3ZM5 19V5H19V19H5ZM6.3436 12.001L12.0005 6.34412L13.4147 7.75834L10.172 11.001H17.6573V13.001H10.172L13.4147 16.2436L12.0005 17.6578L6.3436 12.001Z"></path></svg>
+            <svg class="icon-btn icon-copydown" @click="handleNew(ri, 'top', 1)" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M20 3H4C3.44772 3 3 3.44772 3 4V20C3 20.5523 3.44772 21 4 21H20C20.5523 21 21 20.5523 21 20V4C21 3.44772 20.5523 3 20 3ZM5 19V5H19V19H5ZM17.6569 12L12 17.6568L10.5858 16.2426L13.8284 13H6.34315V11L13.8284 11L10.5858 7.75732L12 6.34311L17.6569 12Z"></path></svg>
+            <svg class="icon-btn icon-delete" @click="handleDelete(ri, 'top')" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M17 6H22V8H20V21C20 21.5523 19.5523 22 19 22H5C4.44772 22 4 21.5523 4 21V8H2V6H7V3C7 2.44772 7.44772 2 8 2H16C16.5523 2 17 2.44772 17 3V6ZM18 8H6V20H18V8ZM13.4142 13.9997L15.182 15.7675L13.7678 17.1817L12 15.4139L10.2322 17.1817L8.81802 15.7675L10.5858 13.9997L8.81802 12.232L10.2322 10.8178L12 12.5855L13.7678 10.8178L15.182 12.232L13.4142 13.9997ZM9 4V6H15V4H9Z"></path></svg>
           </div>
         </div>
       </div>
     </div>
     <div class="cs-tip">
-      <div class="tip">Size {{ location === 'top' ? ocrResult.result.length || '?' : width || '?' }} x {{ location === 'top' ? height || '?' : ocrResult.result.length || '?' }}</div>
+      <div class="tip">Size {{ width || '?' }} x {{ height || '?' }}</div>
     </div>
     <div class="bottom-actions">
-      <button @click="confirm()" style="margin-right: 4px;">Put to {{ location }}</button>
+      <button @click="confirm()" style="margin-right: 4px;">Confirm</button>
       <button @click="close()">Cancel</button>
     </div>
   </div>

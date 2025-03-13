@@ -43,13 +43,7 @@ onBeforeUnmount(() => {
 })
 
 const handleLoadOcr = async () => {
-  const size = window.prompt('What size will you OCR?', '20')
-  if (size) {
-    eventBus.emit('ocrInput', {
-      location: tag.value,
-      size: parseInt(size, 10)
-    })
-  }
+  eventBus.emit('ocrInput')
 }
 
 const handleSelectRepeatContent = (count) => {
