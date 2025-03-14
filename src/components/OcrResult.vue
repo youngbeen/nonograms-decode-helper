@@ -218,6 +218,19 @@ const handleExpend = (rowIndex, cellIndex) => {
   const expendNumbers = row[cellIndex].toString().split('')
   row.splice(cellIndex, 1, ...expendNumbers)
 }
+const handleSingleNumberEdit = (rowIndex, cellIndex, location, e) => {
+  const result = location === 'left' ? ocrLeftResult.result : ocrTopResult.result
+  const row = result[rowIndex]
+  eventBus.emit('notifyShowFollowNumberInput', {
+    x: e.clientX,
+    y: e.clientY,
+    row,
+    changeIndex: cellIndex,
+    callback: (value) => {
+      row[cellIndex] = value
+    }
+  })
+}
 const handleEdit = (rowIndex, location, e) => {
   const result = location === 'left' ? ocrLeftResult.result : ocrTopResult.result
   const row = result[rowIndex]
@@ -379,10 +392,11 @@ const close = () => {
               @dblclick="handleEdit(ri, 'left', $event)">
               <div class="cell"
                 :class="[parseInt(c) > width && 'warning-cell']"
-                v-for="(c, ci) in r" :key="ci">
-                <svg class="icon-btn icon-expend" v-if="c.length > 1" @click="handleExpend(ri, ci)" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M7.44975 7.05029L2.5 12L7.44727 16.9473L8.86148 15.5331L6.32843 13H17.6708L15.1358 15.535L16.55 16.9493L21.5 11.9996L16.5503 7.0498L15.136 8.46402L17.6721 11H6.32843L8.86396 8.46451L7.44975 7.05029Z"></path></svg>
+                v-for="(c, ci) in r" :key="ci"
+                @click="handleSingleNumberEdit(ri, ci, 'left', $event)">
+                <svg class="icon-btn icon-expend" v-if="c.length > 1" @click.stop="handleExpend(ri, ci)" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M7.44975 7.05029L2.5 12L7.44727 16.9473L8.86148 15.5331L6.32843 13H17.6708L15.1358 15.535L16.55 16.9493L21.5 11.9996L16.5503 7.0498L15.136 8.46402L17.6721 11H6.32843L8.86396 8.46451L7.44975 7.05029Z"></path></svg>
                 {{ c }}
-                <svg class="icon-btn icon-collapse" v-if="ci < r.length - 1" @click="handleCollapse(ri, ci)" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M13.5 12 18.4497 7.05029 19.864 8.46451 17.3284 11H23V13H17.3284L19.8615 15.5331 18.4473 16.9473 13.5 12ZM1 13H6.67084L4.13584 15.535 5.55005 16.9493 10.5 11.9996 5.55025 7.0498 4.13604 8.46402 6.67206 11H1V13Z"></path></svg>
+                <svg class="icon-btn icon-collapse" v-if="ci < r.length - 1" @click.stop="handleCollapse(ri, ci)" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M13.5 12 18.4497 7.05029 19.864 8.46451 17.3284 11H23V13H17.3284L19.8615 15.5331 18.4473 16.9473 13.5 12ZM1 13H6.67084L4.13584 15.535 5.55005 16.9493 10.5 11.9996 5.55025 7.0498 4.13604 8.46402 6.67206 11H1V13Z"></path></svg>
               </div>
             </div>
             <div class="box-row-actions">
@@ -409,10 +423,9 @@ const close = () => {
               @dblclick="handleEdit(ri, 'top', $event)">
               <div class="cell"
                 :class="[parseInt(c) > height && 'warning-cell']"
-                v-for="(c, ci) in r" :key="ci">
-                <!-- <svg class="icon-btn icon-expend" v-if="c.length > 1" @click="handleExpend(ri, ci)" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M7.44975 7.05029L2.5 12L7.44727 16.9473L8.86148 15.5331L6.32843 13H17.6708L15.1358 15.535L16.55 16.9493L21.5 11.9996L16.5503 7.0498L15.136 8.46402L17.6721 11H6.32843L8.86396 8.46451L7.44975 7.05029Z"></path></svg> -->
+                v-for="(c, ci) in r" :key="ci"
+                @click="handleSingleNumberEdit(ri, ci, 'top', $event)">
                 {{ c }}
-                <!-- <svg class="icon-btn icon-collapse" v-if="ci < r.length - 1" @click="handleCollapse(ri, ci)" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M13.5 12 18.4497 7.05029 19.864 8.46451 17.3284 11H23V13H17.3284L19.8615 15.5331 18.4473 16.9473 13.5 12ZM1 13H6.67084L4.13584 15.535 5.55005 16.9493 10.5 11.9996 5.55025 7.0498 4.13604 8.46402 6.67206 11H1V13Z"></path></svg> -->
               </div>
             </div>
             <div class="box-col-actions">

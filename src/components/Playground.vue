@@ -9,6 +9,7 @@ import { aiSolve } from '@/utils/ai'
 import { addToStorage, clearStorage, getStorageByOffset, saveCopy, getSavedCopy, savePreset, getPreset } from '@/utils/storage'
 import FollowMenu from './FollowMenu.vue'
 import FollowInput from './FollowInput.vue'
+import FollowNumberInput from './FollowNumberInput.vue'
 import FollowIndicator from './FollowIndicator.vue'
 import FlyTopIndicator from './FlyTopIndicator.vue'
 import InputAssist from './InputAssist.vue'
@@ -1058,8 +1059,6 @@ const handleDragEnd = (e) => {
 
   <follow-indicator></follow-indicator>
 
-  <follow-input></follow-input>
-
   <fly-top-indicator
     :is-show="!isTopNumbersShow && focusColPuz"
     :index="focusColIndex"
@@ -1073,6 +1072,9 @@ const handleDragEnd = (e) => {
     :menu="lastInput.history"></input-assist>
 
   <ocr-result></ocr-result>
+
+  <follow-input></follow-input>
+  <follow-number-input></follow-number-input>
 </template>
 
 <style lang="scss" scoped>
