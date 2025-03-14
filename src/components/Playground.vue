@@ -165,30 +165,30 @@ const listenKeyStroke = (event) => {
     }
   }
 }
-const handleFocusInput = (e, location) => {
-  if (status.value !== 'init') {
-    return
-  }
-  eventBus.emit('notifyShowInputAssist', {
-    x: e.target.offsetLeft,
-    y: e.target.offsetTop + e.target.clientHeight,
-    tag: location,
-    callback: (content) => {
-      // console.log(content)
-      if (location === 'left') {
-        leftInputContent.value += content
-      } else if (location === 'top') {
-        topInputContent.value += content
-      }
-    }
-  })
-}
-const handleBlurInput = (location) => {
-  // NOTE 添加延时是为了避免过早销毁里面的事件执行
-  setTimeout(() => {
-    eventBus.emit('notifyHideInputAssist', location)
-  }, 100)
-}
+// const handleFocusInput = (e, location) => {
+//   if (status.value !== 'init') {
+//     return
+//   }
+//   eventBus.emit('notifyShowInputAssist', {
+//     x: e.target.offsetLeft,
+//     y: e.target.offsetTop + e.target.clientHeight,
+//     tag: location,
+//     callback: (content) => {
+//       // console.log(content)
+//       if (location === 'left') {
+//         leftInputContent.value += content
+//       } else if (location === 'top') {
+//         topInputContent.value += content
+//       }
+//     }
+//   })
+// }
+// const handleBlurInput = (location) => {
+//   // NOTE 添加延时是为了避免过早销毁里面的事件执行
+//   setTimeout(() => {
+//     eventBus.emit('notifyHideInputAssist', location)
+//   }, 100)
+// }
 const handleInput = (e, location) => {
   // console.log(e.keyCode, location)
   if (e.keyCode === 13) {
@@ -239,6 +239,9 @@ const repeatLastInput = () => {
       topInputContent.value = lastInput.content
     }
   }
+}
+const handleLoadOcr = () => {
+  eventBus.emit('ocrInput')
 }
 const submit = (location) => {
   if (location === 'left') {
@@ -905,15 +908,11 @@ const handleDragEnd = (e) => {
       <input class="number-input" type="text"
         v-model="leftInputContent"
         @keydown="handleInput($event, 'left')"
-        @focus="handleFocusInput($event, 'left')"
-        @blur="handleBlurInput('left')"
         placeholder="👈left"
         style="margin-right: 1rem;">
       <input class="number-input" type="text"
         v-model="topInputContent"
         @keydown="handleInput($event, 'top')"
-        @focus="handleFocusInput($event, 'top')"
-        @blur="handleBlurInput('top')"
         placeholder="👇top"
         style="margin-right: 1rem;">
       <span style="display: inline-flex; align-items: center; margin-right: 1rem;">
@@ -934,7 +933,7 @@ const handleDragEnd = (e) => {
     </p>
     <p class="action-seg" v-show="status === 'init'">
       <button @click="repeatLastInput()">Repeat Last Input(R)</button>
-      <!-- <button @click="handleLoadOcr()">OCR (Experimental)</button> -->
+      <button @click="handleLoadOcr()">OCR Puzzle</button>
       <button @click="loadString">Load From String Save</button>
       <button @click="loadDemo('easy')">Load Easy Demo</button>
       <button @click="loadDemo('hard')">Load Hard Demo</button>
