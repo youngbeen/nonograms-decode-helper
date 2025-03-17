@@ -7,6 +7,7 @@ import demoData from '@/demo/demoData'
 import { initMap, resolveBlock, resolveEdge, resolveMaxNumber, resolveSideExactMarkedPiece, resolveSmallSideSpace, resolveSmallSpace, resolveAdjacentBlocks, resolveLonelyNumber, resolveMarkedOrCrossed, mnQuantaResolve, checkAnswerSheet, getLineSum, compareHumanAndAi } from '@/utils/core'
 import { aiSolve } from '@/utils/ai'
 import { addToStorage, clearStorage, getStorageByOffset, saveCopy, getSavedCopy, savePreset, getPreset } from '@/utils/storage'
+// import { startRecording } from '@/utils/speechRecognition'
 import FollowMenu from './FollowMenu.vue'
 import FollowInput from './FollowInput.vue'
 import FollowNumberInput from './FollowNumberInput.vue'
@@ -241,6 +242,9 @@ const repeatLastInput = () => {
     }
   }
 }
+// const handleLoadSpeech = () => {
+//   startRecording()
+// }
 const handleLoadOcr = () => {
   eventBus.emit('ocrInput')
 }
@@ -930,14 +934,15 @@ const handleDragEnd = (e) => {
     </div>
     <!-- buttons -->
     <p class="action-seg" v-show="status === 'init'">
-      <button @click="startDecode">Decode</button>
-    </p>
-    <p class="action-seg" v-show="status === 'init'">
       <button @click="repeatLastInput()">Repeat Last Input(R)</button>
+      <!-- <button @click="handleLoadSpeech()">Speech Recognition</button> -->
       <button @click="handleLoadOcr()">OCR Puzzle</button>
       <button @click="loadString">Load From String Save</button>
       <button @click="loadDemo('easy')">Load Easy Demo</button>
       <button @click="loadDemo('hard')">Load Hard Demo</button>
+    </p>
+    <p class="action-seg" v-show="status === 'init'">
+      <button @click="startDecode">Decode</button>
     </p>
     <p class="action-seg" v-show="status === 'resolving'">
       <button @click="standardResolve">Resolve(R / blank space)</button>
