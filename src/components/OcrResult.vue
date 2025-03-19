@@ -379,8 +379,8 @@ const close = () => {
       </p>
       <!-- 左侧配置 -->
       <div style="display: flex;">
-        <div style="margin-right: 8px;">
-          <img class="ocr-image" v-show="tab === 'left'" :src="ocrLeftResult.originalImage" alt="">
+        <div style="margin-right: 8px; max-height: 788px;">
+          <img class="ocr-image-left" v-show="tab === 'left'" :src="ocrLeftResult.originalImage" alt="">
         </div>
         <div class="box-left-confirm"
           v-show="tab === 'left'">
@@ -410,8 +410,8 @@ const close = () => {
       </div>
       <!-- 上侧配置 -->
       <div>
-        <div>
-          <img class="ocr-image" v-show="tab === 'top'" :src="ocrTopResult.originalImage" alt="">
+        <div style="max-width: 760px;">
+          <img class="ocr-image-top" v-show="tab === 'top'" :src="ocrTopResult.originalImage" alt="">
         </div>
         <div class="box-top-confirm"
           v-show="tab === 'top'">
@@ -463,8 +463,13 @@ const close = () => {
   background: rgba(255, 255, 255, 1);
   // color: #666;
   box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
-  .ocr-image {
+  transition: all 0.2s;
+  .ocr-image-left {
     max-width: 400px;
+    height: 100%;
+  }
+  .ocr-image-top {
+    width: 100%;
     max-height: 400px;
   }
   .cell {
@@ -528,6 +533,7 @@ const close = () => {
         min-width: 360px;
         padding: 4px 16px;
         border: 1px solid var.$border-color;
+        user-select: none;
         &:before {
           position: absolute;
           left: 0;
@@ -605,6 +611,7 @@ const close = () => {
         // min-height: 400px;
         padding: 24px 4px;
         border: 1px solid var.$border-color;
+        user-select: none;
         &:before {
           position: absolute;
           left: 4px;
