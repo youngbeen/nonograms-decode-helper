@@ -379,7 +379,7 @@ const close = () => {
       </p>
       <!-- 左侧配置 -->
       <div style="display: flex;">
-        <div style="margin-right: 8px; max-height: 788px;">
+        <div class="left-preview-image">
           <img class="ocr-image-left" v-show="tab === 'left'" :src="ocrLeftResult.originalImage" alt="">
         </div>
         <div class="box-left-confirm"
@@ -517,6 +517,10 @@ const close = () => {
         font-weight: bold;
       }
     }
+  }
+  .left-preview-image {
+    margin-right: 8px;
+    max-height: min(788px, calc(100vh - 210px));
   }
   .box-left-confirm {
     margin-bottom: 4px;
