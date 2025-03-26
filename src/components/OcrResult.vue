@@ -38,58 +38,57 @@ const setSize = (w, h) => {
   height.value = h || w
 }
 
-const handleFileChange = (event, location) => {
+const handleFileChange = async (event, location) => {
   const files = event.target.files
   const postFiles = Array.prototype.slice.call(files)
   if (postFiles.length === 0) {
     return
   }
-  if (location === 'left') {
-    leftFile.value = postFiles[0]
-  } else {
-    topFile.value = postFiles[0]
+  try {
+    const image1 = await readFileUrl(postFiles[0])
+    let image2 = null
+    if (postFiles.length > 1) {
+        image2 = await readFileUrl(postFiles[1])
+      }
+    if (location === 'left') {
+      leftFile.value = image1
+      image2 && (topFile.value = image2)
+    } else {
+      topFile.value = image1
+      image2 && (leftFile.value = image2)
+    }
+  } catch (error) {
+    console.error(error)
   }
 }
 
+const exchangeFile = () => {
+  [leftFile.value, topFile.value] = [topFile.value, leftFile.value]
+}
+
+const readFileUrl = (file) => {
+  return new Promise((resolve) => {
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      resolve(e.target.result)
+    }
+    reader.readAsDataURL(file)
+  })
+}
+
 const ocrLoad = (image, location) => {
-  // 先预处理图片
-  const reader = new FileReader()
-  reader.onload = (e) => {
-    // e.target.result 是DataURL
-    const imageUrl = e.target.result
-    // 创建Image对象
-    const newImage = new Image()
-    newImage.src = imageUrl
-    // 等待图片加载完成后处理
-    newImage.onload = async () => {
-      const fixedImage = preprocessImage(newImage, location)
-      console.log('fixedImage', fixedImage)
-      if (location === 'top') {
-        // 顶部的数字是竖向的，行级扫描识别会丢失位置信息，切分为竖列N个小图块识别可以保证同一列数字不丢失
-        const mainImage = new Image()
-        mainImage.src = fixedImage
-        mainImage.onload = async (e) => {
-          const worker = await createWorker('eng', 1, {
-            corePath: '/nonograms-decode/',
-            workerPath: '/nonograms-decode/worker.min.js'
-          })
-          await worker.setParameters({
-            tessedit_char_whitelist: '0123456789',
-            // preserve_interword_spaces: '1',
-            // tessedit_pageseg_mode: '5'
-          })
-          const choppedImages = chopImage(mainImage, width.value, 'vertical')
-          console.log('choppedImages', choppedImages)
-          const rets = await Promise.all(choppedImages.map(async c => {
-            const ret = await worker.recognize(c)
-            return ret.data.text
-          }))
-          // console.log('rets', rets)
-          afterOcr(rets, imageUrl, choppedImages, location)
-          await worker.terminate()
-        }
-      } else {
-        // 左侧以一个整体逐行识别，准确率高
+  // 创建Image对象
+  const newImage = new Image()
+  newImage.src = image
+  // 等待图片加载完成后处理
+  newImage.onload = async () => {
+    const fixedImage = preprocessImage(newImage, location)
+    console.log('fixedImage', fixedImage)
+    if (location === 'top') {
+      // 顶部的数字是竖向的，行级扫描识别会丢失位置信息，切分为竖列N个小图块识别可以保证同一列数字不丢失
+      const mainImage = new Image()
+      mainImage.src = fixedImage
+      mainImage.onload = async (e) => {
         const worker = await createWorker('eng', 1, {
           corePath: '/nonograms-decode/',
           workerPath: '/nonograms-decode/worker.min.js'
@@ -99,14 +98,33 @@ const ocrLoad = (image, location) => {
           // preserve_interword_spaces: '1',
           // tessedit_pageseg_mode: '5'
         })
-        const ret = await worker.recognize(fixedImage)
-        // console.log(ret.data.text)
-        afterOcr(ret.data.text, imageUrl, fixedImage, location)
+        const choppedImages = chopImage(mainImage, width.value, 'vertical')
+        console.log('choppedImages', choppedImages)
+        const rets = await Promise.all(choppedImages.map(async c => {
+          const ret = await worker.recognize(c)
+          return ret.data.text
+        }))
+        // console.log('rets', rets)
+        afterOcr(rets, image, choppedImages, location)
         await worker.terminate()
       }
+    } else {
+      // 左侧以一个整体逐行识别，准确率高
+      const worker = await createWorker('eng', 1, {
+        corePath: '/nonograms-decode/',
+        workerPath: '/nonograms-decode/worker.min.js'
+      })
+      await worker.setParameters({
+        tessedit_char_whitelist: '0123456789',
+        // preserve_interword_spaces: '1',
+        // tessedit_pageseg_mode: '5'
+      })
+      const ret = await worker.recognize(fixedImage)
+      // console.log(ret.data.text)
+      afterOcr(ret.data.text, image, fixedImage, location)
+      await worker.terminate()
     }
   }
-  reader.readAsDataURL(image)
 }
 const preprocessImage = (image, location) => {
   const canvas = document.querySelector(`#ocr-canvas-${location}`)
@@ -355,14 +373,30 @@ const close = () => {
       <p>
         <label>
           left
-          <input id="ocr-file-upload-left" type="file" name="image" accept=".jpg,.png,.jpeg,.bmp" @change="handleFileChange($event, 'left')" />
+          <input id="ocr-file-upload-left" type="file" name="image"
+            accept=".jpg,.png,.jpeg,.bmp"
+            multiple
+            @change="handleFileChange($event, 'left')" />
         </label>
         <label>
           top
-          <input id="ocr-file-upload-top" type="file" name="image" accept=".jpg,.png,.jpeg,.bmp" @change="handleFileChange($event, 'top')" />
+          <input id="ocr-file-upload-top" type="file" name="image"
+            accept=".jpg,.png,.jpeg,.bmp"
+            multiple
+            @change="handleFileChange($event, 'top')" />
         </label>
         <canvas id="ocr-canvas-left" style="display: none;"></canvas>
         <canvas id="ocr-canvas-top" style="display: none;"></canvas>
+      </p>
+      <p style="display: flex; justify-content: space-between;">
+        <div class="file-preview">
+          <img v-show="leftFile" :src="leftFile" alt="">
+        </div>
+        <button v-show="leftFile && topFile"
+          @click="exchangeFile()">Exchange</button>
+        <div class="file-preview">
+          <img v-show="topFile" :src="topFile" alt="">
+        </div>
       </p>
       <hr style="margin: 16px 0;">
     </div>
@@ -464,6 +498,15 @@ const close = () => {
   // color: #666;
   box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
   transition: all 0.2s;
+  .file-preview {
+    width: 100px;
+    height: 100px;
+    img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+  }
   .ocr-image-left {
     max-width: 400px;
     height: 100%;
