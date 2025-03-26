@@ -148,6 +148,73 @@
     outline: none;
   }
 }
+.cs-button-group {
+  display: inline-block;
+  position: relative;
+  margin: 8px 0;
+  padding: 0;
+  .shadow {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border-radius: 4px;
+    background: rgba(0, 0, 0, 0.25);
+    will-change: transform;
+    transform: translateY(2px);
+    transition: transform 600ms cubic-bezier(.3, .7, .4, 1);
+  }
+
+  .edge {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border-radius: 4px;
+    background: linear-gradient(to left,
+      #666 0%,
+      #888 8%,
+      #888 92%,
+      #666 100%);
+  }
+  button {
+    padding: 8px 8px;
+    border-radius: 4px;
+    border: none;
+    // background: transparent;
+    color: #333;
+    background: #ddd;
+    font-size: 14px;
+    outline-offset: 4px;
+    transform: translateY(-4px);
+    transition: transform 600ms cubic-bezier(.3, .7, .4, 1);
+    cursor: pointer;
+    user-select: none;
+    touch-action: manipulation;
+    &:hover {
+      filter: brightness(105%);
+      transform: translateY(-6px);
+      transition: transform 250ms cubic-bezier(.3, .7, .4, 1.5);
+    }
+    &:active {
+      transform: translateY(-2px);
+      transition: transform 34ms;
+    }
+  }
+  &:hover .shadow {
+    transform: translateY(4px);
+    transition: transform 250ms cubic-bezier(.3, .7, .4, 1.5);
+  }
+  &:active .shadow {
+    transform: translateY(1px);
+    transition: transform 34ms;
+  }
+  &:focus:not(:focus-visible) {
+    outline: none;
+  }
+}
 .cs-icon {
   width: 20px;
   height: 20px;

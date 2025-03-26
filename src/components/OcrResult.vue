@@ -361,7 +361,9 @@ const close = () => {
     <div class="cs-pop-title">{{ step === 'load' ? 'Set OCR' : 'Confirm OCR Result' }}</div>
     <!-- 设置尺寸 & 加载图片 -->
     <div v-show="step === 'load'">
-      <p>
+      <p class="cs-button-group">
+        <span class="shadow"></span>
+        <span class="edge"></span>
         <button @click="setSize(20)">20x20</button>
         <button @click="setSize(15)">15x15</button>
         <button @click="setSize(12)">12x12</button>
@@ -514,7 +516,6 @@ const close = () => {
       <div class="tip">Size <span :class="[width && ocrTopResult.result.length !== width && 'wrong']">{{ width || '?' }}</span> x <span :class="[height && ocrLeftResult.result.length !== height && 'wrong']">{{ height || '?' }}</span></div>
     </div>
     <div class="bottom-actions">
-      <!-- <button @click="confirm()" style="margin-right: 4px;">Confirm</button> -->
       <button class="cs-button primary"
         @click="confirm"
         style="margin-right: 8px;">
@@ -524,7 +525,6 @@ const close = () => {
           Confirm
         </span>
       </button>
-      <!-- <button @click="close()">Cancel</button> -->
       <button class="cs-button"
         @click="close">
         <span class="shadow"></span>
