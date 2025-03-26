@@ -16,6 +16,7 @@ import FlyTopIndicator from './FlyTopIndicator.vue'
 import InputAssist from './InputAssist.vue'
 import AiLegend from './AiLegend.vue'
 import OcrResult from './OcrResult.vue'
+import DotsMore from '@/assets/icons/DotsMore.vue'
 // const debounce = (fn, ms = 0) => {
 //   let timeoutId
 //   return function (...args) {
@@ -934,19 +935,65 @@ const handleDragEnd = (e) => {
     </div>
     <!-- buttons -->
     <p class="action-seg" v-show="status === 'init'">
-      <button @click="repeatLastInput()">Repeat Last Input(R)</button>
-      <!-- <button @click="handleLoadSpeech()">Speech Recognition</button> -->
-      <button @click="handleLoadOcr()">OCR Puzzle</button>
-      <button @click="loadString">Load From String Save</button>
-      <button @click="loadDemo('easy')">Load Easy Demo</button>
-      <button @click="loadDemo('hard')">Load Hard Demo</button>
+      <button class="cs-button"
+        @click="repeatLastInput()">
+        <span class="shadow"></span>
+        <span class="edge"></span>
+        <span class="front text">Repeat Last Input(R)</span>
+      </button>
+      <!-- <button class="cs-button"
+        @click="handleLoadSpeech()">
+        <span class="shadow"></span>
+        <span class="edge"></span>
+        <span class="front text">Speech Recognition</span>
+      </button> -->
+      <button class="cs-button"
+        @click="handleLoadOcr()">
+        <span class="shadow"></span>
+        <span class="edge"></span>
+        <span class="front text">OCR Puzzle</span>
+      </button>
+      <button class="cs-button"
+        @click="loadString()">
+        <span class="shadow"></span>
+        <span class="edge"></span>
+        <span class="front text">Load From String Save</span>
+      </button>
+      <button class="cs-button"
+        @click="loadDemo('easy')">
+        <span class="shadow"></span>
+        <span class="edge"></span>
+        <span class="front text">Load Easy Demo</span>
+      </button>
+      <button class="cs-button"
+        @click="loadDemo('hard')">
+        <span class="shadow"></span>
+        <span class="edge"></span>
+        <span class="front text">Load Hard Demo</span>
+      </button>
     </p>
     <p class="action-seg" v-show="status === 'init'">
-      <button @click="startDecode">Decode</button>
+      <button class="cs-button primary"
+        @click="startDecode">
+        <span class="shadow"></span>
+        <span class="edge"></span>
+        <span class="front text">Decode</span>
+      </button>
     </p>
     <p class="action-seg" v-show="status === 'resolving'">
-      <button @click="standardResolve">Resolve(R / blank space)</button>
-      <button v-show="answerMap.aiPros.length" @click="acceptAiResolve()">Accept AI Resolve(a)</button>
+      <button class="cs-button primary"
+        @click="standardResolve">
+        <span class="shadow"></span>
+        <span class="edge"></span>
+        <span class="front text">Resolve(R / blank space)</span>
+      </button>
+      <button class="cs-button"
+        v-show="answerMap.aiPros.length"
+        @click="acceptAiResolve()">
+        <span class="shadow"></span>
+        <span class="edge"></span>
+        <span class="front text">Accept AI Resolve(a)</span>
+      </button>
       <!-- <button v-show="debug" @click="resolveByBlock">Resolve By Blocks</button> -->
       <!-- <button v-show="debug" @click="resolveByEdge">Resolve By Edge</button> -->
       <!-- <button v-show="debug" @click="resolveByMaxNumber">Resolve By Max Number</button> -->
@@ -957,20 +1004,55 @@ const handleDragEnd = (e) => {
       <!-- <button v-show="debug" @click="resolveByAdjacentBlocks">Resolve By Adjacent Block</button> -->
       <!-- <button v-show="debug" @click="resolveByLonelyNumber">Resolve By Lonely Number</button> -->
       <!-- <button v-show="debug" @click="resolveByMarkedOrCrossed">Resolve By Marked/Crossed</button> -->
-      <button @click="resolveByMn">m**n Resolve({{ estTime }})</button>
+      <button class="cs-button"
+        @click="resolveByMn">
+        <span class="shadow"></span>
+        <span class="edge"></span>
+        <span class="front text">m**n Resolve({{ estTime }})</span>
+      </button>
     </p>
     <p class="action-seg" v-show="status === 'resolving'">
-      <button v-show="versionOffset > -1 * (versionCount - 1)"
-        @click="abortChange">Revert</button>
+      <button class="cs-button danger"
+        v-show="versionOffset > -1 * (versionCount - 1)"
+        @click="abortChange">
+        <span class="shadow"></span>
+        <span class="edge"></span>
+        <span class="front text">Revert</span>
+      </button>
       {{ versionCount + versionOffset }} / {{ versionCount }}
-      <button v-show="versionOffset < 0"
-        @click="redoChange">Redo</button>
+      <button class="cs-button"
+        v-show="versionOffset < 0"
+        @click="redoChange">
+        <span class="shadow"></span>
+        <span class="edge"></span>
+        <span class="front text">Redo</span>
+      </button>
     </p>
     <p class="action-seg" v-show="status === 'resolving'">
-      <button @click="save">Save</button>
-      <button @click="load">Load</button>
-      <button @click="getSaveString">Get Save String</button>
-      <button @click="restart">Restart</button>
+      <button class="cs-button"
+        @click="save">
+        <span class="shadow"></span>
+        <span class="edge"></span>
+        <span class="front text">Save</span>
+      </button>
+      <button class="cs-button"
+        @click="load">
+        <span class="shadow"></span>
+        <span class="edge"></span>
+        <span class="front text">Load</span>
+      </button>
+      <button class="cs-button"
+        @click="getSaveString">
+        <span class="shadow"></span>
+        <span class="edge"></span>
+        <span class="front text">Get Save String</span>
+      </button>
+      <button class="cs-button danger"
+        @click="restart">
+        <span class="shadow"></span>
+        <span class="edge"></span>
+        <span class="front text">Restart</span>
+      </button>
     </p>
     <p class="action-seg" v-show="status === 'resolving'">
       <p>Theme</p>
@@ -1009,10 +1091,10 @@ const handleDragEnd = (e) => {
         v-for="(t, index) in puz.top" :key="index"
         @dblclick.prevent="status === 'init' && editNumber('top', index, $event)"
         @click.right.prevent="handleShowDropdownMenu('top', index, $event)">
-        <svg class="icon-btn icon-more"
+        <DotsMore class="icon-btn icon-more"
           v-show="status === 'init'"
           @click="handleShowDropdownMenu('top', index, $event)"
-          xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3C10.9 3 10 3.9 10 5C10 6.1 10.9 7 12 7C13.1 7 14 6.1 14 5C14 3.9 13.1 3 12 3ZM12 17C10.9 17 10 17.9 10 19C10 20.1 10.9 21 12 21C13.1 21 14 20.1 14 19C14 17.9 13.1 17 12 17ZM12 10C10.9 10 10 10.9 10 12C10 13.1 10.9 14 12 14C13.1 14 14 13.1 14 12C14 10.9 13.1 10 12 10Z"></path></svg>
+        />
         <div class="cell"
           :class="[answerMapCalc.top.length && n !== answerMapCalc.top[index][nindex] && 'danger']"
           v-for="(n, nindex) in t" :key="nindex">
@@ -1027,10 +1109,10 @@ const handleDragEnd = (e) => {
           v-for="(l, index) in puz.left" :key="index"
           @dblclick.prevent="status === 'init' && editNumber('left', index, $event)"
           @click.right.prevent="handleShowDropdownMenu('left', index, $event)">
-          <svg class="icon-btn icon-more"
+          <DotsMore class="icon-btn icon-more"
             v-show="status === 'init'"
-            @click="handleShowDropdownMenu('left', index, $event)"
-            xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M5 10C3.9 10 3 10.9 3 12C3 13.1 3.9 14 5 14C6.1 14 7 13.1 7 12C7 10.9 6.1 10 5 10ZM19 10C17.9 10 17 10.9 17 12C17 13.1 17.9 14 19 14C20.1 14 21 13.1 21 12C21 10.9 20.1 10 19 10ZM12 10C10.9 10 10 10.9 10 12C10 13.1 10.9 14 12 14C13.1 14 14 13.1 14 12C14 10.9 13.1 10 12 10Z"></path></svg>
+            @click="handleShowDropdownMenu('top', index, $event)"
+          />
           <div class="cell"
             :class="[answerMapCalc.left.length && n !== answerMapCalc.left[index][nindex] && 'danger']"
             v-for="(n, nindex) in l" :key="nindex">
@@ -1115,7 +1197,7 @@ const handleDragEnd = (e) => {
     padding: 6px 0;
     border-bottom: 1px solid var.$border-color;
     button:not(:last-of-type) {
-      margin-right: 1rem;
+      margin-right: 8px;
     }
     .theme-cell {
       position: relative;

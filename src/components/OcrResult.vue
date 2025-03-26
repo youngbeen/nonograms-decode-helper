@@ -4,6 +4,15 @@ import { createWorker } from 'tesseract.js'
 import eventBus from '@/EventBus'
 import { optimizeImage } from '@/utils/image'
 import { getLineSum } from '@/utils/core'
+import ArrowLeftRight from '@/assets/icons/ArrowLeftRight.vue'
+import ExpendHorizontalSplit from '@/assets/icons/ExpendHorizontalSplit.vue'
+import CollapseHorizontal from '@/assets/icons/CollapseHorizontal.vue'
+import Pen from '@/assets/icons/Pen.vue'
+import ArrowUpBox from '@/assets/icons/ArrowUpBox.vue'
+import ArrowDownBox from '@/assets/icons/ArrowDownBox.vue'
+import TrashBin from '@/assets/icons/TrashBin.vue'
+import ArrowLeftBox from '@/assets/icons/ArrowLeftBox.vue'
+import ArrowRightBox from '@/assets/icons/ArrowRightBox.vue'
 
 const isShow = ref(false)
 const width = ref(20)
@@ -388,12 +397,19 @@ const close = () => {
         <canvas id="ocr-canvas-left" style="display: none;"></canvas>
         <canvas id="ocr-canvas-top" style="display: none;"></canvas>
       </p>
-      <p style="display: flex; justify-content: space-between;">
+      <p style="display: flex; justify-content: space-between; align-items: center;">
         <div class="file-preview">
           <img v-show="leftFile" :src="leftFile" alt="">
         </div>
-        <button v-show="leftFile && topFile"
-          @click="exchangeFile()">Exchange</button>
+        <button class="cs-button btn-exchange"
+          v-show="leftFile && topFile"
+          @click="exchangeFile">
+          <span class="shadow"></span>
+          <span class="edge"></span>
+          <span class="front text">
+            <arrow-left-right class="cs-icon"></arrow-left-right>&nbsp;Exchange
+          </span>
+        </button>
         <div class="file-preview">
           <img v-show="topFile" :src="topFile" alt="">
         </div>
@@ -428,16 +444,30 @@ const close = () => {
                 :class="[parseInt(c) > width && 'warning-cell']"
                 v-for="(c, ci) in r" :key="ci"
                 @click="handleSingleNumberEdit(ri, ci, 'left', $event)">
-                <svg class="icon-btn icon-expend" v-if="c.length > 1" @click.stop="handleExpend(ri, ci)" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M7.44975 7.05029L2.5 12L7.44727 16.9473L8.86148 15.5331L6.32843 13H17.6708L15.1358 15.535L16.55 16.9493L21.5 11.9996L16.5503 7.0498L15.136 8.46402L17.6721 11H6.32843L8.86396 8.46451L7.44975 7.05029Z"></path></svg>
+                <ExpendHorizontalSplit class="icon-btn icon-expend"
+                  v-if="c.length > 1"
+                  @click.stop="handleExpend(ri, ci)"
+                />
                 {{ c }}
-                <svg class="icon-btn icon-collapse" v-if="ci < r.length - 1" @click.stop="handleCollapse(ri, ci)" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M13.5 12 18.4497 7.05029 19.864 8.46451 17.3284 11H23V13H17.3284L19.8615 15.5331 18.4473 16.9473 13.5 12ZM1 13H6.67084L4.13584 15.535 5.55005 16.9493 10.5 11.9996 5.55025 7.0498 4.13604 8.46402 6.67206 11H1V13Z"></path></svg>
+                <CollapseHorizontal class="icon-btn icon-collapse"
+                  v-if="ci < r.length - 1"
+                  @click.stop="handleCollapse(ri, ci)"
+                />
               </div>
             </div>
             <div class="box-row-actions">
-              <svg class="icon-btn icon-edit" @click="handleEdit(ri, 'left', $event)" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M15.7279 9.57627L14.3137 8.16206L5 17.4758V18.89H6.41421L15.7279 9.57627ZM17.1421 8.16206L18.5563 6.74785L17.1421 5.33363L15.7279 6.74785L17.1421 8.16206ZM7.24264 20.89H3V16.6473L16.435 3.21231C16.8256 2.82179 17.4587 2.82179 17.8492 3.21231L20.6777 6.04074C21.0682 6.43126 21.0682 7.06443 20.6777 7.45495L7.24264 20.89Z"></path></svg>
-              <svg class="icon-btn icon-copyup" @click="handleNew(ri, 'left', 0)" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M20 3H4C3.44772 3 3 3.44772 3 4V20C3 20.5523 3.44772 21 4 21H20C20.5523 21 21 20.5523 21 20V4C21 3.44772 20.5523 3 20 3ZM5 19V5H19V19H5ZM12 6.34311L6.34315 12L7.75736 13.4142L11 10.1715V17.6568H13V10.1715L16.2426 13.4142L17.6569 12L12 6.34311Z"></path></svg>
-              <svg class="icon-btn icon-copydown" @click="handleNew(ri, 'left', 1)" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M20 3H4C3.44772 3 3 3.44772 3 4V20C3 20.5523 3.44772 21 4 21H20C20.5523 21 21 20.5523 21 20V4C21 3.44772 20.5523 3 20 3ZM5 19V5H19V19H5ZM11.0005 6.34375V13.829L7.75789 10.5864L6.34367 12.0006L12.0005 17.6575L17.6574 12.0006L16.2432 10.5864L13.0005 13.829V6.34375H11.0005Z"></path></svg>
-              <svg class="icon-btn icon-delete" @click="handleDelete(ri, 'left')" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M17 6H22V8H20V21C20 21.5523 19.5523 22 19 22H5C4.44772 22 4 21.5523 4 21V8H2V6H7V3C7 2.44772 7.44772 2 8 2H16C16.5523 2 17 2.44772 17 3V6ZM18 8H6V20H18V8ZM13.4142 13.9997L15.182 15.7675L13.7678 17.1817L12 15.4139L10.2322 17.1817L8.81802 15.7675L10.5858 13.9997L8.81802 12.232L10.2322 10.8178L12 12.5855L13.7678 10.8178L15.182 12.232L13.4142 13.9997ZM9 4V6H15V4H9Z"></path></svg>
+              <Pen class="icon-btn icon-edit"
+                @click.stop="handleEdit(ri, 'left', $event)"
+              />
+              <ArrowUpBox class="icon-btn icon-copyup"
+                @click="handleNew(ri, 'left', 0)"
+              />
+              <ArrowDownBox class="icon-btn icon-copydown"
+                @click="handleNew(ri, 'left', 1)"
+              />
+              <TrashBin class="icon-btn icon-delete"
+                @click="handleDelete(ri, 'left')"
+              />
             </div>
           </div>
         </div>
@@ -463,10 +493,18 @@ const close = () => {
               </div>
             </div>
             <div class="box-col-actions">
-              <svg class="icon-btn icon-edit" @click="handleEdit(ri, 'top', $event)" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M15.7279 9.57627L14.3137 8.16206L5 17.4758V18.89H6.41421L15.7279 9.57627ZM17.1421 8.16206L18.5563 6.74785L17.1421 5.33363L15.7279 6.74785L17.1421 8.16206ZM7.24264 20.89H3V16.6473L16.435 3.21231C16.8256 2.82179 17.4587 2.82179 17.8492 3.21231L20.6777 6.04074C21.0682 6.43126 21.0682 7.06443 20.6777 7.45495L7.24264 20.89Z"></path></svg>
-              <svg class="icon-btn icon-copyup" @click="handleNew(ri, 'top', 0)" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M20 3H4C3.44772 3 3 3.44772 3 4V20C3 20.5523 3.44772 21 4 21H20C20.5523 21 21 20.5523 21 20V4C21 3.44772 20.5523 3 20 3ZM5 19V5H19V19H5ZM6.3436 12.001L12.0005 6.34412L13.4147 7.75834L10.172 11.001H17.6573V13.001H10.172L13.4147 16.2436L12.0005 17.6578L6.3436 12.001Z"></path></svg>
-              <svg class="icon-btn icon-copydown" @click="handleNew(ri, 'top', 1)" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M20 3H4C3.44772 3 3 3.44772 3 4V20C3 20.5523 3.44772 21 4 21H20C20.5523 21 21 20.5523 21 20V4C21 3.44772 20.5523 3 20 3ZM5 19V5H19V19H5ZM17.6569 12L12 17.6568L10.5858 16.2426L13.8284 13H6.34315V11L13.8284 11L10.5858 7.75732L12 6.34311L17.6569 12Z"></path></svg>
-              <svg class="icon-btn icon-delete" @click="handleDelete(ri, 'top')" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M17 6H22V8H20V21C20 21.5523 19.5523 22 19 22H5C4.44772 22 4 21.5523 4 21V8H2V6H7V3C7 2.44772 7.44772 2 8 2H16C16.5523 2 17 2.44772 17 3V6ZM18 8H6V20H18V8ZM13.4142 13.9997L15.182 15.7675L13.7678 17.1817L12 15.4139L10.2322 17.1817L8.81802 15.7675L10.5858 13.9997L8.81802 12.232L10.2322 10.8178L12 12.5855L13.7678 10.8178L15.182 12.232L13.4142 13.9997ZM9 4V6H15V4H9Z"></path></svg>
+              <Pen class="icon-btn icon-edit"
+                @click.stop="handleEdit(ri, 'top', $event)"
+              />
+              <ArrowLeftBox class="icon-btn icon-copyup"
+                @click="handleNew(ri, 'top', 0)"
+              />
+              <ArrowRightBox class="icon-btn icon-copydown"
+                @click="handleNew(ri, 'top', 1)"
+              />
+              <TrashBin class="icon-btn icon-delete"
+                @click="handleDelete(ri, 'top')"
+              />
             </div>
           </div>
         </div>
@@ -476,8 +514,25 @@ const close = () => {
       <div class="tip">Size <span :class="[width && ocrTopResult.result.length !== width && 'wrong']">{{ width || '?' }}</span> x <span :class="[height && ocrLeftResult.result.length !== height && 'wrong']">{{ height || '?' }}</span></div>
     </div>
     <div class="bottom-actions">
-      <button @click="confirm()" style="margin-right: 4px;">Confirm</button>
-      <button @click="close()">Cancel</button>
+      <!-- <button @click="confirm()" style="margin-right: 4px;">Confirm</button> -->
+      <button class="cs-button primary"
+        @click="confirm"
+        style="margin-right: 8px;">
+        <span class="shadow"></span>
+        <span class="edge"></span>
+        <span class="front text">
+          Confirm
+        </span>
+      </button>
+      <!-- <button @click="close()">Cancel</button> -->
+      <button class="cs-button"
+        @click="close">
+        <span class="shadow"></span>
+        <span class="edge"></span>
+        <span class="front text">
+          Cancel
+        </span>
+      </button>
     </div>
   </div>
 </template>
@@ -506,6 +561,9 @@ const close = () => {
       height: 100%;
       object-fit: contain;
     }
+  }
+  .btn-exchange {
+    height: 32px;
   }
   .ocr-image-left {
     max-width: 400px;

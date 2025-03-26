@@ -1,0 +1,154 @@
+@import './base.css';
+
+#app {
+  /* max-width: 1280px; */
+  /* margin: 0 auto; */
+  padding: 2rem;
+  /* font-weight: normal; */
+}
+
+/* a,
+.green {
+  text-decoration: none;
+  color: hsla(160, 100%, 37%, 1);
+  transition: 0.4s;
+  padding: 3px;
+}
+
+@media (hover: hover) {
+  a:hover {
+    background-color: hsla(160, 100%, 37%, 0.2);
+  }
+}
+
+@media (min-width: 1024px) {
+  body {
+    display: flex;
+    place-items: center;
+  }
+
+  #app {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    padding: 0 2rem;
+  }
+} */
+
+/* 公共样式 */
+.cs-pop-title {
+  margin-bottom: 8px;
+  color: #333;
+  font-size: 16px;
+  font-weight: 500;
+}
+.cs-tip {
+  display: inline-block;
+  padding: 6px 12px;
+  background: rgb(196, 235, 249);
+  font-size: 12px;
+}
+.cs-button {
+  position: relative;
+  margin: 8px 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  outline-offset: 4px;
+  transition: filter 250ms;
+  cursor: pointer;
+  user-select: none;
+  touch-action: manipulation;
+  .shadow {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border-radius: 4px;
+    background: rgba(0, 0, 0, 0.25);
+    will-change: transform;
+    transform: translateY(2px);
+    transition: transform 600ms cubic-bezier(.3, .7, .4, 1);
+  }
+  .edge {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border-radius: 4px;
+    background: linear-gradient(to left,
+      #666 0%,
+      #888 8%,
+      #888 92%,
+      #666 100%);
+  }
+  .front {
+    display: flex;
+    align-items: center;
+    position: relative;
+    padding: 8px 8px;
+    border-radius: 4px;
+    font-size: 14px;
+    color: #333;
+    background: #ddd;
+    will-change: transform;
+    transform: translateY(-4px);
+    transition: transform 600ms cubic-bezier(.3, .7, .4, 1);
+    .cs-icon {
+      width: 14px;
+      height: 14px;
+    }
+  }
+  &.primary {
+    .edge {
+      background: linear-gradient(to left,
+        #505977 0%,
+        #6a769e 8%,
+        #6a769e 92%,
+        #505977 100%);
+    }
+    .front {
+      background: #aabeff;
+    }
+  }
+  &.danger {
+    .edge {
+      background: linear-gradient(to left,
+        #52001b 0%,
+        #a30036 8%,
+        #a30036 92%,
+        #52001b 100%);
+    }
+    .front {
+      color: #fff;
+      background: #f0003c;
+    }
+  }
+  &:hover {
+    filter: brightness(105%);
+  }
+  &:hover .front {
+    transform: translateY(-6px);
+    transition: transform 250ms cubic-bezier(.3, .7, .4, 1.5);
+  }
+  &:active .front {
+    transform: translateY(-2px);
+    transition: transform 34ms;
+  }
+  &:hover .shadow {
+    transform: translateY(4px);
+    transition: transform 250ms cubic-bezier(.3, .7, .4, 1.5);
+  }
+  &:active .shadow {
+    transform: translateY(1px);
+    transition: transform 34ms;
+  }
+  &:focus:not(:focus-visible) {
+    outline: none;
+  }
+}
+.cs-icon {
+  width: 20px;
+  height: 20px;
+}

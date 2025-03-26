@@ -47,8 +47,12 @@ const submit = () => {
     :style="{ left: x + 'px', top: y + 'px' }">
     <input type="text"
       v-model="inputValue">
-    <button
-      @click="submit">Ok</button>
+    <button class="cs-button primary"
+      @click="submit">
+      <span class="shadow"></span>
+      <span class="edge"></span>
+      <span class="front text">Ok</span>
+    </button>
   </div>
 </template>
 
@@ -72,8 +76,8 @@ input {
   font-family: consolas;
 }
 button {
-  height: 48px;
+  // height: 48px;
   min-width: 60px;
-  font-size: 24px;
+  // font-size: 24px;
 }
 </style>
