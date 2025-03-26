@@ -921,9 +921,11 @@ const handleDragEnd = (e) => {
         @keydown="handleInput($event, 'top')"
         placeholder="👇top"
         style="margin-right: 1rem;">
-      <span style="display: inline-flex; align-items: center; margin-right: 1rem;">
-        <input type="checkbox" v-model="isFastMode" id="fast-mode">
-        <label for="fast-mode" style="font-size: 13px;">Fast mode</label>
+      <span style="margin-right: 1rem;">
+        <label style="display: inline-flex; align-items: center;">
+          <input class="cs-checkbox" type="checkbox" v-model="isFastMode" id="fast-mode">
+          Fast mode
+        </label>
       </span>
       <div class="box-tip" style="display: inline-block;"
         v-show="status === 'init'">

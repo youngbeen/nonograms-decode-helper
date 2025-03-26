@@ -4,6 +4,8 @@ import { createWorker } from 'tesseract.js'
 import eventBus from '@/EventBus'
 import { optimizeImage } from '@/utils/image'
 import { getLineSum } from '@/utils/core'
+import UploadButton from '@/components/UploadButton.vue'
+import Loading from '@/components/Loading.vue'
 import ArrowLeftRight from '@/assets/icons/ArrowLeftRight.vue'
 import ExpendHorizontalSplit from '@/assets/icons/ExpendHorizontalSplit.vue'
 import CollapseHorizontal from '@/assets/icons/CollapseHorizontal.vue'
@@ -15,6 +17,7 @@ import ArrowLeftBox from '@/assets/icons/ArrowLeftBox.vue'
 import ArrowRightBox from '@/assets/icons/ArrowRightBox.vue'
 
 const isShow = ref(false)
+const loadingCount = ref(false)
 const width = ref(20)
 const height = ref(20)
 const step = ref('load') // load | confirm
@@ -45,6 +48,15 @@ onBeforeUnmount(() => {
 const setSize = (w, h) => {
   width.value = w
   height.value = h || w
+}
+
+const triggerUpload = (location) => {
+  const event = new MouseEvent('click', {
+    bubbles: true,
+    cancelable: true,
+    view: window
+  })
+  document.getElementById(`ocr-file-upload-${location}`).dispatchEvent(event)
 }
 
 const handleFileChange = async (event, location) => {
@@ -198,6 +210,7 @@ const afterOcr = (rawContent, originalImage, fixedImage, location) => {
     ocrTopResult.result = columns
     ocrTopResult.originalImage = originalImage
     ocrTopResult.fixedImage = fixedImage
+    loadingCount.value--
   } else {
     // 处理左侧的数字，以行形式存在
     const rows = rawContent.split('\n')
@@ -229,6 +242,7 @@ const afterOcr = (rawContent, originalImage, fixedImage, location) => {
     ocrLeftResult.result = fixedRows
     ocrLeftResult.originalImage = originalImage
     ocrLeftResult.fixedImage = fixedImage
+    loadingCount.value--
   }
 }
 
@@ -287,6 +301,7 @@ const confirm = () => {
       window.alert('You need to set OCR at first')
       return
     }
+    loadingCount.value = 2
     ocrLoad(leftFile.value, 'left')
     ocrLoad(topFile.value, 'top')
     step.value = 'confirm'
@@ -381,20 +396,28 @@ const close = () => {
         </label>
       </p>
       <hr style="margin: 16px 0;">
-      <p>
-        <label>
+      <p style="display: flex; justify-content: space-between;">
+        <label style="margin-right: 8px;">
           left
+          <upload-button
+            :text="'Select Left Image'"
+            @click="triggerUpload('left')"></upload-button>
           <input id="ocr-file-upload-left" type="file" name="image"
             accept=".jpg,.png,.jpeg,.bmp"
             multiple
-            @change="handleFileChange($event, 'left')" />
+            @change="handleFileChange($event, 'left')"
+            style="display: none;" />
         </label>
         <label>
           top
+          <upload-button
+            :text="'Select Top Image'"
+            @click="triggerUpload('top')"></upload-button>
           <input id="ocr-file-upload-top" type="file" name="image"
             accept=".jpg,.png,.jpeg,.bmp"
             multiple
-            @change="handleFileChange($event, 'top')" />
+            @change="handleFileChange($event, 'top')"
+            style="display: none;" />
         </label>
         <canvas id="ocr-canvas-left" style="display: none;"></canvas>
         <canvas id="ocr-canvas-top" style="display: none;"></canvas>
@@ -431,6 +454,10 @@ const close = () => {
           <span>Top</span>
         </label>
       </p>
+      <div style="display: flex; justify-content: center;"
+        v-show="loadingCount > 0">
+        <loading></loading>
+      </div>
       <!-- 左侧配置 -->
       <div style="display: flex;">
         <div class="left-preview-image">
