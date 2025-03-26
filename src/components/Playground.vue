@@ -1177,7 +1177,7 @@ const handleDragEnd = (e) => {
   top: 0; */
   /* right: 0; */
   width: 100%;
-  height: 200px;
+  height: 220px;
   padding: 16px 32px;
   background: #fff;
   border: 2px solid var.$system-color;
@@ -1260,7 +1260,7 @@ const handleDragEnd = (e) => {
   opacity: 0;
 }
 .box-main {
-  margin-top: 200px;
+  margin-top: 220px;
   &.free {
     margin-top: auto;
   }

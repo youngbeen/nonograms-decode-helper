@@ -421,13 +421,15 @@ const close = () => {
 
     <!-- 展示并确认OCR结果 -->
     <div v-show="step === 'confirm'">
-      <p class="box-tabs">
-        <button class="tab"
-          :class="[tab === 'left' && 'active']"
-          @click="tab = 'left'">Left</button>
-        <button class="tab"
-          :class="[tab === 'top' && 'active']"
-          @click="tab = 'top'">Top</button>
+      <p class="cs-tabs">
+        <label>
+          <input type="radio" name="radio" value="left" v-model="tab">
+          <span>Left</span>
+        </label>
+        <label>
+          <input type="radio" name="radio" value="top" v-model="tab">
+          <span>Top</span>
+        </label>
       </p>
       <!-- 左侧配置 -->
       <div style="display: flex;">
@@ -601,23 +603,8 @@ const close = () => {
     cursor: pointer;
     transition: all 0.3s;
   }
-  .box-tabs {
-    display: flex;
-    align-items: center;
+  .cs-tabs {
     margin-bottom: 8px;
-    .tab {
-      width: 50%;
-      height: 48px;
-      background: #fff;
-      color: #666;
-      border: 1px solid var.$border-color;
-      font-size: 14px;
-      &.active {
-        color: #333;
-        background: var.$system-color;
-        font-weight: bold;
-      }
-    }
   }
   .left-preview-image {
     margin-right: 8px;
