@@ -918,12 +918,12 @@ const handleDragEnd = (e) => {
     @dragend="handleDragEnd">
     <div class="init-panel"
       v-show="status === 'init'">
-      <input class="number-input" type="text"
+      <input class="cs-input number-input" type="text"
         v-model="leftInputContent"
         @keydown="handleInput($event, 'left')"
         placeholder="👈left"
         style="margin-right: 1rem;">
-      <input class="number-input" type="text"
+      <input class="cs-input number-input" type="text"
         v-model="topInputContent"
         @keydown="handleInput($event, 'top')"
         placeholder="👇top"
@@ -1213,8 +1213,8 @@ const handleDragEnd = (e) => {
   }
   .number-input {
     min-width: 300px;
-    height: 30px;
-    line-height: 30px;
+    // height: 30px;
+    // line-height: 30px;
   }
   .action-seg {
     padding: 6px 0;

@@ -388,11 +388,11 @@ const close = () => {
       <p>
         <label>
           width
-          <input type="text" v-model="width" placeholder="width" style="width: 60px;">
+          <input class="cs-input" type="text" v-model="width" placeholder="width" style="width: 60px;">
         </label>
         <label>
           height
-          <input type="text" v-model="height" placeholder="height" style="width: 60px;">
+          <input class="cs-input" type="text" v-model="height" placeholder="height" style="width: 60px;">
         </label>
       </p>
       <hr style="margin: 16px 0;">

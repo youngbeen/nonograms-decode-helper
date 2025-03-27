@@ -45,7 +45,7 @@ const submit = () => {
   <div class="box-follow-input"
     v-show="isShow"
     :style="{ left: x + 'px', top: y + 'px' }">
-    <input type="text"
+    <input class="cs-input" type="text"
       v-model="inputValue">
     <button class="cs-button primary"
       @click="submit">
