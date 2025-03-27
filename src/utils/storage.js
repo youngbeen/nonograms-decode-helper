@@ -54,3 +54,22 @@ export const getPreset = () => {
   const data = JSON.parse(window.localStorage.getItem('userPreset') || '{}')
   return data
 }
+
+export const addToShowBox = (newData) => {
+  const oldData = getShowBox()
+  if (oldData.length >= 3) {
+    oldData.pop()
+  }
+  const data = [{
+    puz: newData.puz,
+    answerMap: newData.answerMap,
+    name: newData.name || '',
+    timestamp: (new Date()).getTime()
+  }]
+  window.localStorage.setItem('showBoxSave', JSON.stringify([...data, ...oldData]))
+}
+
+export const getShowBox = () => {
+  const data = JSON.parse(window.localStorage.getItem('showBoxSave') || '[]')
+  return data
+}

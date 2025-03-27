@@ -1605,17 +1605,20 @@ const concatAnswers = (raw) => {
 }
 
 export const checkAnswerSheet = (puz, answer) => {
+  let correctFlag = true
   const checkLine = (direction, lines, answer) => {
     lines.forEach((line, index) => {
       if (isLineClear(direction, answer, index)) {
         const lineInfo = getLineInfo(direction, answer, index)
         if (line[0] !== 0) {
           if (lineInfo.markedPieces.length !== line.length) {
+            correctFlag = false
             console.error('错误行列', direction, '索引：', index, '错误原因：marked块数量不相等')
           } else if (lineInfo.markedPieces.length === line.length) {
             for (let j = 0; j < line.length; j++) {
               const n = line[j]
               if (n !== lineInfo.markedPieces[j].length) {
+                correctFlag = false
                 console.error('错误行列', direction, '索引：', index, `错误原因：索引${j}的数字标记不正确`)
                 break
               }
@@ -1623,14 +1626,18 @@ export const checkAnswerSheet = (puz, answer) => {
           }
         } else {
           if (lineInfo.markedPieces.length) {
+            correctFlag = false
             console.error('错误行列', direction, '索引：', index, '错误原因：不应该出现任何marked格子')
           }
         }
+      } else {
+        correctFlag = false
       }
     })
   }
   checkLine('row', puz.left, answer)
   checkLine('column', puz.top, answer)
+  return correctFlag
 }
 
 export const compareHumanAndAi = (humanAnswer, aiAnswer) => {

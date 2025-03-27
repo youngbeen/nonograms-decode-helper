@@ -1,12 +1,13 @@
 <script setup>
 import { ref, reactive, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
+import confetti from 'canvas-confetti'
 import { clipboard } from '@youngbeen/angle-ctrl'
 import eventBus from '@/EventBus'
 import demoData from '@/demo/demoData'
 import { initMap, resolveBlock, resolveEdge, resolveMaxNumber, resolveSideExactMarkedPiece, resolveSmallSideSpace, resolveSmallSpace, resolveAdjacentBlocks, resolveLonelyNumber, resolveMarkedOrCrossed, mnQuantaResolve, checkAnswerSheet, getLineSum, compareHumanAndAi } from '@/utils/core'
 import { aiSolve } from '@/utils/ai'
-import { addToStorage, clearStorage, getStorageByOffset, saveCopy, getSavedCopy, savePreset, getPreset } from '@/utils/storage'
+import { addToStorage, clearStorage, getStorageByOffset, saveCopy, getSavedCopy, savePreset, getPreset, addToShowBox } from '@/utils/storage'
 // import { startRecording } from '@/utils/speechRecognition'
 import FollowMenu from './FollowMenu.vue'
 import FollowInput from './FollowInput.vue'
@@ -16,6 +17,7 @@ import FlyTopIndicator from './FlyTopIndicator.vue'
 import InputAssist from './InputAssist.vue'
 import AiLegend from './AiLegend.vue'
 import OcrResult from './OcrResult.vue'
+import ShowBox from './ShowBox.vue'
 import DotsMore from '@/assets/icons/DotsMore.vue'
 import SaveIcon from '@/assets/icons/Save.vue'
 import RestartIcon from '@/assets/icons/Restart.vue'
@@ -776,7 +778,7 @@ const standardResolve = () => {
   resolveByAdjacentBlocks(true)
   resolveByLonelyNumber(true)
   resolveByMarkedOrCrossed(true)
-  checkAnswerSheet(puz, answerMap.data)
+  const isAnswerCorrect = checkAnswerSheet(puz, answerMap.data)
   const compareResult = compareHumanAndAi(answerMap.data, aiResult)
   console.log('人工推理 vs AI推理结果', compareResult)
   if (compareResult && compareResult.aiPros) {
@@ -787,9 +789,22 @@ const standardResolve = () => {
   const res = addToStorage(answerMap.data, versionOffset.value)
   versionCount.value = res.length
   versionOffset.value = 0
-  if (resolveInfo.value.resolved > countBeforeResolve) {
-    console.log('有新解决的cell，自动重复调用resolve')
-    standardResolve()
+  if (isAnswerCorrect) {
+    fireworks()
+    addToShowBox({
+      puz: {
+        top: puz.top,
+        left: puz.left
+      },
+      answerMap: answerMap.data,
+      name: 'default'
+    })
+    eventBus.emit('notifyUpdateShowBox')
+  } else {
+    if (resolveInfo.value.resolved > countBeforeResolve) {
+      console.log('有新解决的cell，自动重复调用resolve')
+      standardResolve()
+    }
   }
 }
 const acceptAiResolve = () => {
@@ -903,6 +918,13 @@ const handleDragEnd = (e) => {
       // console.log(divX, divY)
     }
   }
+}
+const fireworks = () => {
+  confetti({
+    particleCount: 150,
+    spread: 70,
+    origin: { y: 0.6 }
+  })
 }
 </script>
 
@@ -1180,6 +1202,9 @@ const handleDragEnd = (e) => {
 
   <input-assist
     :menu="lastInput.history"></input-assist>
+
+  <show-box color="#086db9"
+    v-if="status === 'resolving'"></show-box>
 
   <ocr-result></ocr-result>
 
