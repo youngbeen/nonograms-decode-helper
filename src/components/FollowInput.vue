@@ -77,7 +77,12 @@ input {
 }
 button {
   // height: 48px;
-  min-width: 60px;
+  width: 60px;
   // font-size: 24px;
+  .text {
+    display: inline-block;
+    width: 100%;
+    text-align: center;
+  }
 }
 </style>

@@ -17,6 +17,13 @@ import InputAssist from './InputAssist.vue'
 import AiLegend from './AiLegend.vue'
 import OcrResult from './OcrResult.vue'
 import DotsMore from '@/assets/icons/DotsMore.vue'
+import SaveIcon from '@/assets/icons/Save.vue'
+import RestartIcon from '@/assets/icons/Restart.vue'
+import ArrowGoBack from '@/assets/icons/ArrowGoBack.vue'
+import ArrowGoForward from '@/assets/icons/ArrowGoForward.vue'
+import CharacterRecognitionIcon from '@/assets/icons/CharacterRecognition.vue'
+import LightBulbFlash from '@/assets/icons/LightBulbFlash.vue'
+import PlayIcon from '@/assets/icons/Play.vue'
 // const debounce = (fn, ms = 0) => {
 //   let timeoutId
 //   return function (...args) {
@@ -953,7 +960,9 @@ const handleDragEnd = (e) => {
         @click="handleLoadOcr()">
         <span class="shadow"></span>
         <span class="edge"></span>
-        <span class="front text">OCR Puzzle</span>
+        <span class="front text">
+          <CharacterRecognitionIcon class="cs-icon" />&nbsp;OCR Puzzle
+        </span>
       </button>
       <button class="cs-button"
         @click="loadString()">
@@ -979,7 +988,9 @@ const handleDragEnd = (e) => {
         @click="startDecode">
         <span class="shadow"></span>
         <span class="edge"></span>
-        <span class="front text">Decode</span>
+        <span class="front text">
+          <PlayIcon class="cs-icon" />&nbsp;Decode
+        </span>
       </button>
     </p>
     <p class="action-seg" v-show="status === 'resolving'">
@@ -987,7 +998,9 @@ const handleDragEnd = (e) => {
         @click="standardResolve">
         <span class="shadow"></span>
         <span class="edge"></span>
-        <span class="front text">Resolve(R / blank space)</span>
+        <span class="front text">
+          <LightBulbFlash class="cs-icon" />&nbsp;Resolve(R / blank space)
+        </span>
       </button>
       <button class="cs-button"
         v-show="answerMap.aiPros.length"
@@ -1014,12 +1027,14 @@ const handleDragEnd = (e) => {
       </button>
     </p>
     <p class="action-seg" v-show="status === 'resolving'">
-      <button class="cs-button danger"
+      <button class="cs-button"
         v-show="versionOffset > -1 * (versionCount - 1)"
         @click="abortChange">
         <span class="shadow"></span>
         <span class="edge"></span>
-        <span class="front text">Revert</span>
+        <span class="front text">
+          <ArrowGoBack class="cs-icon" />
+        </span>
       </button>
       {{ versionCount + versionOffset }} / {{ versionCount }}
       <button class="cs-button"
@@ -1027,7 +1042,9 @@ const handleDragEnd = (e) => {
         @click="redoChange">
         <span class="shadow"></span>
         <span class="edge"></span>
-        <span class="front text">Redo</span>
+        <span class="front text">
+          <ArrowGoForward class="cs-icon" />
+        </span>
       </button>
     </p>
     <p class="action-seg" v-show="status === 'resolving'">
@@ -1035,7 +1052,9 @@ const handleDragEnd = (e) => {
         @click="save">
         <span class="shadow"></span>
         <span class="edge"></span>
-        <span class="front text">Save</span>
+        <span class="front text">
+          <SaveIcon class="cs-icon" />&nbsp;Save
+        </span>
       </button>
       <button class="cs-button"
         @click="load">
@@ -1053,7 +1072,9 @@ const handleDragEnd = (e) => {
         @click="restart">
         <span class="shadow"></span>
         <span class="edge"></span>
-        <span class="front text">Restart</span>
+        <span class="front text">
+          <RestartIcon class="cs-icon" />&nbsp;Restart
+        </span>
       </button>
     </p>
     <p class="action-seg" v-show="status === 'resolving'">
