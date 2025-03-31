@@ -78,8 +78,9 @@ const draw = async (data, color) => {
 .bed-show-box {
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  justify-content: space-around;
   align-items: center;
+  gap: 2rem;
   position: fixed;
   z-index: 11;
   right: 0;
@@ -87,24 +88,46 @@ const draw = async (data, color) => {
   bottom: 0;
   min-width: 200px;
   border-left: 2px solid var.$system-color;
-  background: #fff;
-  perspective: 900px;
+  // background: #fff;
+  background: #f5f5f5;
+  perspective: 1000px;
   .show-box {
+    position: relative;
     width: 160px;
     // border: 2px solid #fafafa;
     background: #fff;
-    box-shadow: 0 0 5px 0 rgb(76, 76, 77);
+    // box-shadow: 0 0 5px 0 rgb(76, 76, 77);
     transform-style: preserve-3d;
-    transform: rotateX(-70deg) rotateY(0);
+    // transform: rotateX(-70deg) rotateY(0);
     // transform-origin: bottom;
     transition: all 0.3s ease-in-out;
-    opacity: 0.9;
+    opacity: 1;
+    &:before {
+      content: "";
+      position: absolute;
+      top: -15px;
+      left: -15px;
+      right: -15px;
+      bottom: -15px;
+      background: #fff0e0;
+      box-shadow:
+        0 8px 18px rgba(0,0,0,0.3), /* 外阴影 */
+        inset 0 0 15px rgba(0,0,0,0.1); /* 内阴影模拟画框凹槽 [[16]] */
+      z-index: -1;
+    }
     &:hover {
-      transform: translate3d(-50%, 0, 100px) scale(1.4) rotateX(0) rotateY(0);
+      transform: translate3d(-60px, 0, 20px) scale(1.3);
       opacity: 1;
     }
     img {
       width: 100%;
+      border: 12px solid #fff; /* 模拟画布边框 */
+      box-sizing: border-box;
+      transition: transform 0.3s ease;
+      background: white; /* 画布底色 */
+      box-shadow:
+        0 2px 5px rgba(0,0,0,0.1), /* 画布阴影 */
+        inset 0 0 10px rgba(0,0,0,0.05); /* 画布纹理 */
     }
   }
 }

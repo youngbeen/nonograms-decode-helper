@@ -921,9 +921,24 @@ const handleDragEnd = (e) => {
 }
 const fireworks = () => {
   confetti({
+    angle: 60,
     particleCount: 150,
-    spread: 70,
-    origin: { y: 0.6 }
+    spread: 120,
+    startVelocity: 60,
+    origin: { y: 0.7 }
+  })
+  confetti({
+    particleCount: 150,
+    spread: 100,
+    startVelocity: 60,
+    origin: { y: 0.7 }
+  })
+  confetti({
+    angle: 120,
+    particleCount: 150,
+    spread: 100,
+    startVelocity: 60,
+    origin: { y: 0.7 }
   })
 }
 </script>
