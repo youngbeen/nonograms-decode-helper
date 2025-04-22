@@ -21,9 +21,9 @@ onMounted(() => {
     const windowHeight = window.innerHeight || document.documentElement.clientHeight
     const originalX = params.x || 0
     const originalY = params.y || 0
-    if (originalX > windowWidth - 140) {
+    if (originalX > windowWidth - 190) {
       // 位置太靠右，修正位置
-      x.value = windowWidth - 140
+      x.value = windowWidth - 190
     } else {
       x.value = originalX
     }
@@ -64,7 +64,7 @@ const submit = (val) => {
     </div>
     <div class="number-row">
       <div class="number"
-        v-for="n in 16" :key="n"
+        v-for="n in 21" :key="n"
         @click="submit(n - 1)">{{ n - 1 }}</div>
     </div>
   </div>
@@ -87,7 +87,7 @@ const submit = (val) => {
     font-family: consolas;
     span {
       &:not(:last-of-type) {
-        margin-right: 4px;
+        margin-right: 6px;
       }
       &.highlight {
         color: red;
@@ -97,7 +97,7 @@ const submit = (val) => {
   }
   .number-row {
     display: inline-block;
-    width: 104px;
+    width: 156px;
     .number {
       display: inline-block;
       width: 24px;

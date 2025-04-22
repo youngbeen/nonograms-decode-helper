@@ -4,7 +4,10 @@ import Robot from '@/assets/icons/Robot.vue'
 
 <template>
   <div class="box-ai-legend">
-    <Robot />&nbsp;<span>AI Reasoning</span>
+    <div class="bg-layer"></div>
+    <div class="info-box">
+      <Robot />&nbsp;<span>AI Reasoning</span>
+    </div>
   </div>
 </template>
 
@@ -12,30 +15,49 @@ import Robot from '@/assets/icons/Robot.vue'
 @use "../assets/var.scss" as var;
 
 .box-ai-legend {
-  position: relative;
-  display: flex;
-  align-items: center;
   position: fixed;
-  z-index: 2;
-  left: 8px;
-  top: 8px;
-  padding: 4px;
-  border: 1px solid var.$system-color;
-  background: rgba(255, 255, 255, 1);
-  // color: #666;
-  font-size: 12px;
-  svg {
-    width: 16px;
-  }
-  &:after {
+  z-index: 14;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  .bg-layer {
     position: absolute;
-    right: -2px;
-    top: -2px;
-    content: "";
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background-color: red;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(110, 110, 110, 0.6);
+  }
+  .info-box {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    display: flex;
+    align-items: center;
+    padding: 8px;
+    border: 2px solid var.$system-color;
+    background: rgba(255, 255, 255, 1);
+    // color: #666;
+    font-size: 18px;
+    svg {
+      width: 22px;
+      animation-name: heartBeat;
+      animation-duration: 1.3s;
+      animation-timing-function: ease-in-out;
+      animation-iteration-count: infinite;
+    }
+    // &:after {
+    //   position: absolute;
+    //   right: -2px;
+    //   top: -2px;
+    //   content: "";
+    //   width: 8px;
+    //   height: 8px;
+    //   border-radius: 50%;
+    //   background-color: red;
+    // }
   }
 }
 // .icon {
@@ -60,4 +82,30 @@ import Robot from '@/assets/icons/Robot.vue'
 // .content.padded {
 //   margin-right: 30px;
 // }
+@keyframes heartBeat {
+  0% {
+    -webkit-transform: scale(1);
+    transform: scale(1);
+  }
+
+  14% {
+    -webkit-transform: scale(1.3);
+    transform: scale(1.3);
+  }
+
+  28% {
+    -webkit-transform: scale(1);
+    transform: scale(1);
+  }
+
+  42% {
+    -webkit-transform: scale(1.3);
+    transform: scale(1.3);
+  }
+
+  70% {
+    -webkit-transform: scale(1);
+    transform: scale(1);
+  }
+}
 </style>

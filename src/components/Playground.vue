@@ -36,6 +36,7 @@ import PlayIcon from '@/assets/icons/Play.vue'
 
 const debug = ref(false)
 const theme = ref('')
+const loading = ref(false) // 是否正在推理中
 let status = ref('init') // init | resolving
 const answerMap = reactive({
   data: [
@@ -170,12 +171,12 @@ const listenKeyStroke = (event) => {
       repeatLastInput()
     }
   }
-  if (status.value === 'resolving') {
-    if (e.keyCode === 65) {
-      // 侦听a按键
-      acceptAiResolve()
-    }
-  }
+  // if (status.value === 'resolving') {
+  //   if (e.keyCode === 65) {
+  //     // 侦听a按键
+  //     acceptAiResolve()
+  //   }
+  // }
 }
 // const handleFocusInput = (e, location) => {
 //   if (status.value !== 'init') {
@@ -765,6 +766,11 @@ const redoChange = () => {
  }
 }
 const standardResolve = () => {
+  if (loading.value) {
+    return
+  }
+  // 推理开始
+  loading.value = true
   const countBeforeResolve = resolveInfo.value.resolved
   // 先使用AI单独尝试推理
   const aiResult = aiSolve(puz, answerMap.data)
@@ -786,9 +792,14 @@ const standardResolve = () => {
   } else {
     answerMap.aiPros = []
   }
+  if (answerMap.aiPros.length) {
+    acceptAiResolve()
+  }
   const res = addToStorage(answerMap.data, versionOffset.value)
   versionCount.value = res.length
   versionOffset.value = 0
+  loading.value = false
+  // 推理结束
   if (isAnswerCorrect) {
     fireworks()
     addToShowBox({
@@ -815,9 +826,9 @@ const acceptAiResolve = () => {
     answerMap.data[r.rowIndex][r.colIndex] = r.aiValue
   })
   answerMap.aiPros = []
-  const res = addToStorage(answerMap.data, versionOffset.value)
-  versionCount.value = res.length
-  versionOffset.value = 0
+  // const res = addToStorage(answerMap.data, versionOffset.value)
+  // versionCount.value = res.length
+  // versionOffset.value = 0
 }
 const save = () => {
   // const name = window.prompt('Give a name for your save data...')
@@ -1039,13 +1050,13 @@ const fireworks = () => {
           <LightBulbFlash class="cs-icon" />&nbsp;Resolve(R / blank space)
         </span>
       </button>
-      <button class="cs-button"
+      <!-- <button class="cs-button"
         v-show="answerMap.aiPros.length"
         @click="acceptAiResolve()">
         <span class="shadow"></span>
         <span class="edge"></span>
         <span class="front text">Accept AI Resolve(a)</span>
-      </button>
+      </button> -->
       <!-- <button v-show="debug" @click="resolveByBlock">Resolve By Blocks</button> -->
       <!-- <button v-show="debug" @click="resolveByEdge">Resolve By Edge</button> -->
       <!-- <button v-show="debug" @click="resolveByMaxNumber">Resolve By Max Number</button> -->
@@ -1201,9 +1212,6 @@ const fireworks = () => {
     </div>
   </div>
 
-  <ai-legend
-    v-show="answerMap.aiPros && answerMap.aiPros.length"></ai-legend>
-
   <follow-indicator></follow-indicator>
 
   <fly-top-indicator
@@ -1225,6 +1233,9 @@ const fireworks = () => {
 
   <follow-input></follow-input>
   <follow-number-input></follow-number-input>
+
+  <ai-legend
+    v-show="loading"></ai-legend>
 </template>
 
 <style lang="scss" scoped>
