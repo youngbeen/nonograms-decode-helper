@@ -765,8 +765,8 @@ const redoChange = () => {
   answerMap.data = historyData
  }
 }
-const standardResolve = () => {
-  if (loading.value) {
+const standardResolve = (auto = false) => {
+  if (loading.value && !auto) {
     return
   }
   // 推理开始
@@ -798,9 +798,9 @@ const standardResolve = () => {
   const res = addToStorage(answerMap.data, versionOffset.value)
   versionCount.value = res.length
   versionOffset.value = 0
-  loading.value = false
   // 推理结束
   if (isAnswerCorrect) {
+    loading.value = false
     fireworks()
     addToShowBox({
       puz: {
@@ -814,7 +814,9 @@ const standardResolve = () => {
   } else {
     if (resolveInfo.value.resolved > countBeforeResolve) {
       console.log('有新解决的cell，自动重复调用resolve')
-      standardResolve()
+      standardResolve(true)
+    } else {
+      loading.value = false
     }
   }
 }
@@ -1421,10 +1423,10 @@ const fireworks = () => {
               content: "";
               position: absolute;
               width: 2px;
-              height: 100%;
+              height: calc(100% + 26px);
               right: -2px;
-              top: 0;
-              background: #999;
+              top: -13px;
+              background: #8C9EAD;
             }
           }
           &.style-1 {
@@ -1482,11 +1484,11 @@ const fireworks = () => {
         &:after {
           content: "";
           position: absolute;
-          width: 100%;
+          width: calc(100% + 26px);
           height: 2px;
           bottom: -2px;
-          left: 0;
-          background: #999;
+          left: -13px;
+          background: #8C9EAD;
         }
       }
     }
