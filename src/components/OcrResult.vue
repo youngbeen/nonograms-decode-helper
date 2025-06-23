@@ -69,14 +69,22 @@ const handleFileChange = async (event, location) => {
     const image1 = await readFileUrl(postFiles[0])
     let image2 = null
     if (postFiles.length > 1) {
-        image2 = await readFileUrl(postFiles[1])
-      }
+      image2 = await readFileUrl(postFiles[1])
+    }
     if (location === 'left') {
       leftFile.value = image1
       image2 && (topFile.value = image2)
-    } else {
+    } else if (location === 'top') {
       topFile.value = image1
       image2 && (leftFile.value = image2)
+    } else if (location === 'complete') {
+      const mainImage = new Image()
+      mainImage.src = image1
+      mainImage.onload = async () => {
+        const legendArea = chopLegendArea(mainImage)
+        leftFile.value = legendArea.left
+        topFile.value = legendArea.top
+      }
     }
   } catch (error) {
     console.error(error)
@@ -95,6 +103,29 @@ const readFileUrl = (file) => {
     }
     reader.readAsDataURL(file)
   })
+}
+
+const chopLegendArea = (mainImage) => {
+  const canvas = document.querySelector('#ocr-canvas-complete')
+  const ctx = canvas.getContext('2d', {
+    willReadFrequently: true
+  })
+  const result = { left: null, top: null }
+  const leftWidth = 354
+  const leftHeight = 826
+  const topWidth = 825
+  const topHeight = 452
+  canvas.width = leftWidth
+  canvas.height = leftHeight
+  ctx.drawImage(mainImage, 0, 638, leftWidth, leftHeight, 0, 0, leftWidth, leftHeight)
+  result.left = canvas.toDataURL()
+
+  canvas.width = topWidth
+  canvas.height = topHeight
+  ctx.drawImage(mainImage, 351, 191, topWidth, topHeight, 0, 0, topWidth, topHeight)
+  result.top = canvas.toDataURL()
+
+  return result
 }
 
 const ocrLoad = (image, location) => {
@@ -398,6 +429,16 @@ const close = () => {
       <hr style="margin: 16px 0;">
       <p style="display: flex; justify-content: space-between;">
         <label style="margin-right: 8px;">
+          Chop Complete
+          <upload-button
+            :text="'Select Complete Image'"
+            @click="triggerUpload('complete')"></upload-button>
+          <input id="ocr-file-upload-complete" type="file" name="image"
+            accept=".jpg,.png,.jpeg,.bmp"
+            @change="handleFileChange($event, 'complete')"
+            style="display: none;" />
+        </label>
+        <label style="margin-right: 8px;">
           left
           <upload-button
             :text="'Select Left Image'"
@@ -421,6 +462,7 @@ const close = () => {
         </label>
         <canvas id="ocr-canvas-left" style="display: none;"></canvas>
         <canvas id="ocr-canvas-top" style="display: none;"></canvas>
+        <canvas id="ocr-canvas-complete" style="display: none;"></canvas>
       </p>
       <p style="display: flex; justify-content: space-between; align-items: center;">
         <div class="file-preview">
