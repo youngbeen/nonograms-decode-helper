@@ -1,7 +1,8 @@
 <script setup>
-import { ref, onMounted, onBeforeUnmount, reactive } from 'vue'
+import { ref, onMounted, onBeforeUnmount, reactive, computed } from 'vue'
 import { createWorker } from 'tesseract.js'
 import eventBus from '@/EventBus'
+import pocket from '@/models/pocket'
 import { optimizeImage } from '@/utils/image'
 import { getLineSum } from '@/utils/core'
 import UploadButton from '@/components/UploadButton.vue'
@@ -34,10 +35,22 @@ const ocrTopResult = reactive({
   originalImage: null,
   fixedImage: null
 })
+const pageTitle = computed(() => {
+  if (step.value === 'load') {
+    if (pocket.list.length) {
+      return `Set OCR(${pocket.list.length} left)`
+    } else {
+      return 'Set OCR'
+    }
+  } else {
+    return 'Confirm OCR Result'
+  }
+})
 
 onMounted(() => {
   eventBus.on('ocrInput', () => {
     isShow.value = true
+    checkPocket()
   })
 })
 
@@ -48,6 +61,25 @@ onBeforeUnmount(() => {
 const setSize = (w, h) => {
   width.value = w
   height.value = h || w
+}
+
+const checkPocket = async () => {
+  if (!pocket.list.length) {
+    return
+  }
+  const saveImage = pocket.list.shift()
+  try {
+    const image = await readFileUrl(saveImage)
+    const mainImage = new Image()
+    mainImage.src = image
+    mainImage.onload = async () => {
+      const legendArea = chopLegendArea(mainImage)
+      leftFile.value = legendArea.left
+      topFile.value = legendArea.top
+    }
+  } catch (error) {
+    console.error(error)
+  }
 }
 
 const triggerUpload = (location) => {
@@ -68,7 +100,7 @@ const handleFileChange = async (event, location) => {
   try {
     const image1 = await readFileUrl(postFiles[0])
     let image2 = null
-    if (postFiles.length > 1) {
+    if (postFiles.length > 1 && location !== 'complete') {
       image2 = await readFileUrl(postFiles[1])
     }
     if (location === 'left') {
@@ -78,6 +110,7 @@ const handleFileChange = async (event, location) => {
       topFile.value = image1
       image2 && (leftFile.value = image2)
     } else if (location === 'complete') {
+      pocket.list = [...pocket.list, ...postFiles.slice(1)]
       const mainImage = new Image()
       mainImage.src = image1
       mainImage.onload = async () => {
@@ -404,7 +437,7 @@ const close = () => {
 <template>
   <div class="box-ocr-result"
     v-show="isShow">
-    <div class="cs-pop-title">{{ step === 'load' ? 'Set OCR' : 'Confirm OCR Result' }}</div>
+    <div class="cs-pop-title">{{ pageTitle }}</div>
     <!-- 设置尺寸 & 加载图片 -->
     <div v-show="step === 'load'">
       <p class="cs-button-group">
@@ -431,17 +464,18 @@ const close = () => {
         <label style="margin-right: 8px;">
           Chop Complete
           <upload-button
-            :text="'Select Complete Image'"
+            :text="'Select Images'"
             @click="triggerUpload('complete')"></upload-button>
           <input id="ocr-file-upload-complete" type="file" name="image"
             accept=".jpg,.png,.jpeg,.bmp"
+            multiple
             @change="handleFileChange($event, 'complete')"
             style="display: none;" />
         </label>
         <label style="margin-right: 8px;">
           left
           <upload-button
-            :text="'Select Left Image'"
+            :text="'Select Left'"
             @click="triggerUpload('left')"></upload-button>
           <input id="ocr-file-upload-left" type="file" name="image"
             accept=".jpg,.png,.jpeg,.bmp"
@@ -452,7 +486,7 @@ const close = () => {
         <label>
           top
           <upload-button
-            :text="'Select Top Image'"
+            :text="'Select Top'"
             @click="triggerUpload('top')"></upload-button>
           <input id="ocr-file-upload-top" type="file" name="image"
             accept=".jpg,.png,.jpeg,.bmp"
