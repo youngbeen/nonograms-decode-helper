@@ -850,11 +850,14 @@ const load = () => {
       console.log('不一样尺寸的问题，清理掉之前的记录')
       clearStorage()
     }
+    status.value = 'resolving'
     answerMap.data = savedData.answerMap
     puz.top = savedData.puz.top
     puz.left = savedData.puz.left
     versionCount.value = 1
     versionOffset.value = 0
+    panelLeft.value = panelPositionSave.left
+    panelTop.value = panelPositionSave.top
   }
 }
 const getSaveString = () => {
@@ -1013,6 +1016,12 @@ const fireworks = () => {
         <span class="front text">
           <CharacterRecognitionIcon class="cs-icon" />&nbsp;OCR Puzzle
         </span>
+      </button>
+      <button class="cs-button"
+        @click="load()">
+        <span class="shadow"></span>
+        <span class="edge"></span>
+        <span class="front text">Load</span>
       </button>
       <button class="cs-button"
         @click="loadString()">
