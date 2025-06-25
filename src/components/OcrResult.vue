@@ -147,7 +147,7 @@ const chopLegendArea = (mainImage) => {
   const leftWidth = 354
   const leftHeight = 826
   const topWidth = 825
-  const topHeight = 452
+  const topHeight = 425
   canvas.width = leftWidth
   canvas.height = leftHeight
   ctx.drawImage(mainImage, 0, 638, leftWidth, leftHeight, 0, 0, leftWidth, leftHeight)
@@ -155,7 +155,7 @@ const chopLegendArea = (mainImage) => {
 
   canvas.width = topWidth
   canvas.height = topHeight
-  ctx.drawImage(mainImage, 351, 191, topWidth, topHeight, 0, 0, topWidth, topHeight)
+  ctx.drawImage(mainImage, 350, 217, topWidth, topHeight, 0, 0, topWidth, topHeight)
   result.top = canvas.toDataURL()
 
   return result
@@ -430,6 +430,7 @@ const close = () => {
   topFile.value = null
   document.querySelector('#ocr-file-upload-left').value = ''
   document.querySelector('#ocr-file-upload-top').value = ''
+  document.querySelector('#ocr-file-upload-complete').value = ''
   isShow.value = false
 }
 </script>
