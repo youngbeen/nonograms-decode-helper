@@ -667,11 +667,11 @@ const handleMouseOverCell = (e, rowIndex, colIndex) => {
   handleGroupNumber(e)
 }
 const handleMouseOutCell = () => {
+  focusRowIndex.value = -1
+  focusColIndex.value = -1
   if (status.value === 'finish') {
     return
   }
-  focusRowIndex.value = -1
-  focusColIndex.value = -1
   handleGroupNumber()
 }
 const handleGroupNumber = (e) => {
