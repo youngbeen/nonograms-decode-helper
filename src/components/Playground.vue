@@ -1,5 +1,5 @@
 <script setup>
-import { ref, reactive, computed, onMounted, onUnmounted } from 'vue'
+import { ref, reactive, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import confetti from 'canvas-confetti'
 import { clipboard } from '@youngbeen/angle-ctrl'
@@ -37,7 +37,9 @@ import PlayIcon from '@/assets/icons/Play.vue'
 const debug = ref(false)
 const theme = ref('')
 const loading = ref(false) // 是否正在推理中
-let status = ref('init') // init | resolving
+const isAdmire = ref(false) // 欣赏状态
+const canvasScale = ref(1) // 画布缩放比例
+let status = ref('init') // init | resolving | finish
 const answerMap = reactive({
   data: [
     // ['1|0|<blank>']
@@ -111,6 +113,11 @@ const estTime = computed(() => {
     return '-'
   }
 })
+watch(isAdmire, (val) => {
+  if (!val) {
+    canvasScale.value = 1
+  }
+})
 const isElementScrolledOut = (element, topMargin = 0) => {
   const rect = element.getBoundingClientRect()
   const windowHeight = window.innerHeight
@@ -153,12 +160,25 @@ onMounted(() => {
   })
   window.addEventListener('scroll', checkTopNumberScrollOut)
   window.addEventListener('keydown', listenKeyStroke)
+  document.querySelector('#canvas-bed').addEventListener('wheel', resizeCanvas)
 })
 onUnmounted(() => {
   eventBus.off('confirmOcrResult')
   window.removeEventListener('scroll', checkTopNumberScrollOut)
   window.removeEventListener('keydown', listenKeyStroke)
+  document.querySelector('#canvas-bed').removeEventListener('wheel', resizeCanvas)
 })
+const resizeCanvas = (e) => {
+  if (status.value === 'finish' && isAdmire.value) {
+    e.preventDefault()
+    const direction = e.deltaY > 0 ? -1 : 1 // >0 向下滚动 = 缩小
+    // 计算缩放量（动态步长）
+    const zoomIntensity = 0.1
+    const newScale = canvasScale.value * (1 + direction * zoomIntensity)
+    // 边界限制
+    canvasScale.value = Math.max(0.2, Math.min(newScale, 1.8)) // 限制缩放范围
+  }
+}
 const listenKeyStroke = (event) => {
   const e = event || window.event
   if (e.keyCode === 82 || e.keyCode === 32) {
@@ -501,6 +521,7 @@ const startDecode = () => {
     return
   }
   status.value = 'resolving'
+  isAdmire.value = false
   answerMap.data = initMap(width.value, height.value)
   versionCount.value = 0
   versionOffset.value = 0
@@ -633,6 +654,9 @@ const focusColPuz = computed(() => {
 })
 const comboMode = ref('') // '' - closed, mark|cross
 const handleMouseOverCell = (e, rowIndex, colIndex) => {
+  if (status.value === 'finish') {
+    return
+  }
   if (comboMode.value === 'mark' && answerMap.data[rowIndex][colIndex] !== '1') {
     mark(rowIndex, colIndex)
   } else if (comboMode.value === 'cross' && answerMap.data[rowIndex][colIndex] !== '0') {
@@ -643,6 +667,9 @@ const handleMouseOverCell = (e, rowIndex, colIndex) => {
   handleGroupNumber(e)
 }
 const handleMouseOutCell = () => {
+  if (status.value === 'finish') {
+    return
+  }
   focusRowIndex.value = -1
   focusColIndex.value = -1
   handleGroupNumber()
@@ -713,6 +740,9 @@ const handleGroupNumber = (e) => {
 }
 const handleMouseDown = (e, rowIndex, colIndex) => {
   // console.log('mouse down', e)
+  if (status.value === 'finish') {
+    return
+  }
   if (e.button === 2) {
     // start cross
     cross(rowIndex, colIndex)
@@ -801,6 +831,7 @@ const standardResolve = (auto = false) => {
   // 推理结束
   if (isAnswerCorrect) {
     loading.value = false
+    status.value = 'finish'
     fireworks()
     addToShowBox({
       puz: {
@@ -851,6 +882,7 @@ const load = () => {
       clearStorage()
     }
     status.value = 'resolving'
+    isAdmire.value = false
     answerMap.data = savedData.answerMap
     puz.top = savedData.puz.top
     puz.left = savedData.puz.left
@@ -874,6 +906,7 @@ const loadString = () => {
   const savedData = JSON.parse(stringData)[0]
   if (savedData) {
     status.value = 'resolving'
+    isAdmire.value = false
     answerMap.data = savedData.answerMap
     puz.top = savedData.puz.top
     puz.left = savedData.puz.left
@@ -895,6 +928,7 @@ const restart = () => {
     }
   })
   status.value = 'init'
+  isAdmire.value = false
   answerMap.data = []
   puz.top = []
   puz.left = []
@@ -961,7 +995,7 @@ const fireworks = () => {
 
 <template>
   <div class="action-panel"
-    :class="[status === 'resolving' && 'right']"
+    :class="[(status === 'resolving' || status === 'finish') && 'right']"
     :style="{
       left: panelLeft + 'px',
       top: panelTop + 'px'
@@ -1106,7 +1140,16 @@ const fireworks = () => {
         </span>
       </button>
     </p>
-    <p class="action-seg" v-show="status === 'resolving'">
+    <p class="action-seg" v-show="status === 'resolving' || status === 'finish'">
+      <button class="cs-button"
+        v-show="status === 'finish'"
+        @click="isAdmire = !isAdmire">
+        <span class="shadow"></span>
+        <span class="edge"></span>
+        <span class="front text">
+          Admire
+        </span>
+      </button>
       <button class="cs-button"
         @click="save">
         <span class="shadow"></span>
@@ -1136,7 +1179,7 @@ const fireworks = () => {
         </span>
       </button>
     </p>
-    <p class="action-seg" v-show="status === 'resolving'">
+    <p class="action-seg" v-show="status === 'resolving' || status === 'finish'">
       <p>Theme</p>
       <div style="display: flex; align-items: center;">
         <div class="theme-cell"
@@ -1154,7 +1197,7 @@ const fireworks = () => {
       <div class="cs-tip">
         <div class="tip">Size {{ width }} x {{ height }}</div>
         <div class="tip"
-          v-show="status === 'resolving'">Resolved {{ resolveInfo.resolved }}/{{ resolveInfo.total }} ({{ resolveInfo.rate.toFixed(2) }})</div>
+          v-show="status === 'resolving' || status === 'finish'">Resolved {{ resolveInfo.resolved }}/{{ resolveInfo.total }} ({{ resolveInfo.rate.toFixed(2) }})</div>
         <div class="tip"
           v-show="status === 'resolving'">Left click to mark, right click to cross</div>
       </div>
@@ -1164,10 +1207,11 @@ const fireworks = () => {
   <div class="box-main"
     :class="[
       theme ? theme : '',
-      status === 'resolving' && 'free'
+      (status === 'resolving' || status === 'finish') && 'free'
     ]"
     @mouseup="handleMouseUp">
-    <div class="box-top-indicators">
+    <div class="box-top-indicators"
+      :class="[isAdmire && 'invisible']">
       <div class="box-top-indi"
         :class="[focusColIndex === index && 'focus', answerMapCalc.top.length && t.length < answerMapCalc.top[index].length && 'danger']"
         v-for="(t, index) in puz.top" :key="index"
@@ -1184,8 +1228,9 @@ const fireworks = () => {
         </div>
       </div>
     </div>
-    <div style="position: relative; top: 2px;">
-      <div class="box-left-indicators">
+    <div id="canvas-bed">
+      <div class="box-left-indicators"
+        :class="[isAdmire && 'invisible']">
         <div class="box-left-indi"
           :class="[focusRowIndex === index && 'focus', answerMapCalc.left.length && l.length < answerMapCalc.left[index].length && 'danger']"
           v-for="(l, index) in puz.left" :key="index"
@@ -1203,7 +1248,14 @@ const fireworks = () => {
         </div>
       </div>
       <div class="box-canvas"
-        v-show="status === 'resolving'">
+        :class="[
+          status + '-canvas',
+          status === 'finish' && isAdmire && 'admire-canvas'
+        ]"
+        :style="{
+          transform: `scale(${canvasScale})`
+        }"
+        v-show="status === 'resolving' || status === 'finish'">
         <div class="row"
           v-for="(r, index) in answerMap.data" :key="index">
           <div class="row-box">
@@ -1238,7 +1290,7 @@ const fireworks = () => {
     :menu="lastInput.history"></input-assist>
 
   <show-box color="#086db9"
-    v-if="status === 'resolving'"></show-box>
+    v-if="status === 'resolving' || status === 'finish'"></show-box>
 
   <ocr-result></ocr-result>
 
@@ -1254,6 +1306,10 @@ const fireworks = () => {
 @use "../assets/thinkblue-theme.scss" as thinkblue;
 @use "../assets/naturegreen-theme.scss" as naturegreen;
 @use "../assets/techdark-theme.scss" as techdark;
+
+.invisible {
+  opacity: 0;
+}
 
 .action-panel {
   position: fixed;
@@ -1410,9 +1466,18 @@ const fireworks = () => {
       }
     }
   }
+  #canvas-bed {
+    position: relative;
+    top: 2px;
+    min-width: 818px;
+    min-height: 558px;
+  }
   .box-canvas {
     margin-left: 262px;
     /* background: red; */
+    will-change: transform;
+    transition: transform 0.1s ease;
+    transform-origin: left;
     .row {
       margin-bottom: 2px;
       .row-box {
@@ -1452,37 +1517,11 @@ const fireworks = () => {
           &.style-0 {
             background: rgb(240, 240, 240);
             box-shadow: inset 1px 1px 2px #babecc, inset -1px -1px 2px #fff;
-            &:before {
-              content: "×";
-              position: absolute;
-              left: 0;
-              top: 0;
-              right: 0;
-              bottom: 0;
-              z-index: 1;
-              line-height: 24px;
-              color: rgb(185, 185, 185);
-              font-size: 28px;
-              text-align: center;
-            }
           }
           &.style-possible-0 {
             background: rgb(240, 240, 240);
             box-shadow: inset 1px 1px 2px #babecc, inset -1px -1px 2px #fff;
             animation: blink infinite 1s linear;
-            &:before {
-              content: "×";
-              position: absolute;
-              left: 0;
-              top: 0;
-              right: 0;
-              bottom: 0;
-              z-index: 1;
-              line-height: 24px;
-              color: rgb(185, 185, 185);
-              font-size: 28px;
-              text-align: center;
-            }
           }
         }
       }
@@ -1498,6 +1537,65 @@ const fireworks = () => {
           bottom: -2px;
           left: -13px;
           background: #8C9EAD;
+        }
+      }
+    }
+    &.resolving-canvas {
+      .row {
+        .row-box {
+          .clk-cell {
+            &.style-0 {
+              &:before {
+                content: "×";
+                position: absolute;
+                left: 0;
+                top: 0;
+                right: 0;
+                bottom: 0;
+                z-index: 1;
+                line-height: 24px;
+                color: rgb(185, 185, 185);
+                font-size: 28px;
+                text-align: center;
+              }
+            }
+            &.style-possible-0 {
+              &:before {
+                content: "×";
+                position: absolute;
+                left: 0;
+                top: 0;
+                right: 0;
+                bottom: 0;
+                z-index: 1;
+                line-height: 24px;
+                color: rgb(185, 185, 185);
+                font-size: 28px;
+                text-align: center;
+              }
+            }
+          }
+        }
+      }
+    }
+    &.admire-canvas {
+      .row {
+        .row-box {
+          .clk-cell {
+            &:nth-of-type(5n) {
+              position: relative;
+              &:after {
+                content: "";
+                width: 0;
+              }
+            }
+          }
+        }
+        &:nth-of-type(5n) > .row-box {
+          &:after {
+            content: "";
+            height: 0;
+          }
         }
       }
     }
