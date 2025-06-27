@@ -670,6 +670,7 @@ const handleMouseOutCell = () => {
   focusRowIndex.value = -1
   focusColIndex.value = -1
   if (status.value === 'finish') {
+    eventBus.emit('notifyHideFollowIndicator')
     return
   }
   handleGroupNumber()
